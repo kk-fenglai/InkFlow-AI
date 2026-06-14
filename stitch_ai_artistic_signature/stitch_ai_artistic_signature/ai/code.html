@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>InkFlow AI - Artisan Edition</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,100..900;1,100..900&amp;family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-surface-variant": "#454742",
+                    "on-tertiary-fixed": "#261900",
+                    "inverse-surface": "#32302a",
+                    "on-secondary": "#ffffff",
+                    "on-secondary-fixed-variant": "#4b4642",
+                    "inverse-on-surface": "#f5f0e7",
+                    "surface-container-low": "#f8f3ea",
+                    "tertiary-container": "#fffaf8",
+                    "on-primary-fixed": "#1b1c1a",
+                    "on-surface": "#1d1c16",
+                    "outline": "#767872",
+                    "background": "#fef9ef",
+                    "on-error": "#ffffff",
+                    "surface-dim": "#ded9d1",
+                    "on-secondary-fixed": "#1e1b18",
+                    "on-error-container": "#93000a",
+                    "inverse-primary": "#c8c6c3",
+                    "surface-bright": "#fef9ef",
+                    "surface-container": "#f2ede4",
+                    "on-tertiary-fixed-variant": "#5d4201",
+                    "error-container": "#ffdad6",
+                    "on-secondary-container": "#67625e",
+                    "primary": "#5e5e5c",
+                    "tertiary": "#775a19",
+                    "surface-container-highest": "#e7e2d9",
+                    "primary-container": "#fdfbf7",
+                    "tertiary-fixed": "#ffdea5",
+                    "outline-variant": "#c6c7c0",
+                    "primary-fixed": "#e4e2de",
+                    "surface-container-high": "#ede8df",
+                    "secondary-fixed-dim": "#cdc5c0",
+                    "on-primary-container": "#747471",
+                    "secondary": "#635d5a",
+                    "on-primary-fixed-variant": "#474744",
+                    "surface-variant": "#e7e2d9",
+                    "tertiary-fixed-dim": "#e9c176",
+                    "on-background": "#1d1c16",
+                    "surface": "#fef9ef",
+                    "on-tertiary": "#ffffff",
+                    "surface-tint": "#5e5e5c",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "on-tertiary-container": "#8f6e2d",
+                    "primary-fixed-dim": "#c8c6c3",
+                    "secondary-fixed": "#e9e1dc",
+                    "error": "#ba1a1a",
+                    "secondary-container": "#e6ded9"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "gutter": "24px",
+                    "xs": "4px",
+                    "lg": "24px",
+                    "container-max": "1120px",
+                    "sm": "8px",
+                    "md": "16px",
+                    "unit": "4px",
+                    "xl": "40px",
+                    "xxl": "64px"
+            },
+            "fontFamily": {
+                    "headline-sm": [
+                            "Libre Caslon Text"
+                    ],
+                    "headline-md": [
+                            "Libre Caslon Text"
+                    ],
+                    "body-md": [
+                            "Hanken Grotesk"
+                    ],
+                    "body-lg": [
+                            "Hanken Grotesk"
+                    ],
+                    "label-md": [
+                            "Hanken Grotesk"
+                    ],
+                    "label-sm": [
+                            "Hanken Grotesk"
+                    ],
+                    "display-lg": [
+                            "Libre Caslon Text"
+                    ],
+                    "display-lg-mobile": [
+                            "Libre Caslon Text"
+                    ]
+            },
+            "fontSize": {
+                    "headline-sm": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "headline-md": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "body-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "body-lg": [
+                            "18px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "label-md": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "label-sm": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "letterSpacing": "0.03em",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "display-lg": [
+                            "48px",
+                            {
+                                    "lineHeight": "56px",
+                                    "letterSpacing": "-0.01em",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "display-lg-mobile": [
+                            "36px",
+                            {
+                                    "lineHeight": "44px",
+                                    "fontWeight": "400"
+                            }
+                    ]
+            }
+        },
+        },
+      }
+    </script>
+<style>
+        .noise-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+        .ink-bleed-animation {
+            animation: inkBleed 3s ease-out forwards;
+            filter: blur(2px) contrast(1.5);
+            opacity: 0;
+        }
+        @keyframes inkBleed {
+            0% { opacity: 0; filter: blur(4px) contrast(2); transform: scale(0.98); }
+            50% { opacity: 0.8; filter: blur(1px) contrast(1.2); }
+            100% { opacity: 1; filter: blur(0px) contrast(1); transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen relative font-body-md selection:bg-tertiary-fixed selection:text-on-tertiary-fixed antialiased">
+<!-- TopNavBar -->
+<header class="bg-background w-full top-0 sticky border-b border-surface-container z-40 transition-colors duration-300">
+<div class="flex justify-between items-center w-full px-lg py-md max-w-container-max mx-auto">
+<div class="flex items-center gap-xl">
+<div class="font-headline-md text-headline-md text-on-surface tracking-tight">InkFlow AI</div>
+<nav class="hidden md:flex items-center gap-lg">
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:text-tertiary transition-colors duration-300" href="#">Templates</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:text-tertiary transition-colors duration-300" href="#">Hand-drawn AI</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:text-tertiary transition-colors duration-300" href="#">Learning</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:text-tertiary transition-colors duration-300" href="#">Integrations</a>
+</nav>
+</div>
+<div class="flex items-center gap-md">
+<button aria-label="history" class="text-on-surface-variant hover:text-on-surface hover:text-tertiary transition-colors duration-300">
+<span class="material-symbols-outlined text-[24px]">history</span>
+</button>
+<button aria-label="settings" class="text-on-surface-variant hover:text-on-surface hover:text-tertiary transition-colors duration-300">
+<span class="material-symbols-outlined text-[24px]">settings</span>
+</button>
+<button class="font-label-md text-label-md bg-on-surface text-surface px-md py-sm rounded-lg hover:bg-tertiary transition-colors duration-300 ml-sm">Create New</button>
+<img alt="User's Studio Profile" class="w-10 h-10 rounded-full border border-outline-variant object-cover ml-sm cursor-pointer hover:opacity-80 transition-opacity" src="https://lh3.googleusercontent.com/aida-public/AB6AXuArK2HywVW-gPupe4PZkF-pV8CX7aTAAntunTjfEUyDqHvQxcxZbuoL_-hlLR-veCdSTYKX7YtAMunrJu05uSZbPGtOUgaoy7e3mukaFBqSgOGHHO_l-r3XI716Ermkw1hbScFimWv3Y1EiOU87aOzA7XDMP_TWkA4syq6zLA8A2MY2gltEonhb-eyPi-_rrGL2G_PdY1rszFQmnjtEs5sagNnQCEnIBnja4YQZS6b7wQz40uZ5TXekUQCCsWiY4JJ-d0NcioEgrrc"/>
+</div>
+</div>
+</header>
+<main class="w-full flex flex-col items-center justify-start pb-xxl">
+<!-- Hero Section -->
+<section class="w-full max-w-container-max px-lg py-xxl flex flex-col items-center text-center mt-xl">
+<div class="inline-flex items-center justify-center px-sm py-xs bg-tertiary/10 rounded-full mb-lg">
+<span class="font-label-sm text-label-sm text-tertiary uppercase tracking-wider">Artisan Edition</span>
+</div>
+<h1 class="font-display-lg text-display-lg md:text-[64px] md:leading-[72px] text-on-surface max-w-3xl mb-md">
+                The Art of the Signature, Reimagined.
+            </h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mb-xl">
+                Elevate your digital mark with artisanal AI. Craft a signature that carries the weight, texture, and undeniable presence of traditional ink on paper.
+            </p>
+<div class="relative w-full max-w-4xl aspect-[21/9] bg-surface-container-lowest border border-surface-variant rounded-xl overflow-hidden flex items-center justify-center mb-xl shadow-sm">
+<!-- Data Store Placeholder for actual generation -->
+<img alt="Hero Signature Canvas" class="absolute inset-0 w-full h-full object-cover opacity-80 mix-blend-multiply" data-alt="A meticulously crafted, handwritten signature on heavy, cream-colored, textured paper. The ink appears fresh, with a subtle sepia tone and a slight bleed effect around the edges of the stroke. The lighting is warm and natural, casting soft shadows that highlight the paper's grain, evoking a quiet, artisanal studio atmosphere. The composition is centered, elegant, and perfectly balanced, embodying the essence of high-end editorial minimalism." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAi7dFeX7tta9ZZtGKGIwOfyw_7AIdEtn17IXXby-bI3isF_1aVALl3e5zlpJsfwDyvcLdXUmzlM906QDdva9F_Bx2D5_XECe4H88wmiNEybx18UGDn82pgv_RBzNV43poYNlryZPbQPNQg0VI2OQuC7pAAFnxjHTiyDmMq_kmxSfE_vG5CEVW7Wum_UaD-oDnBb2U_z3F6G0NUpawn4BCzRVbhF7meQ2bQaGKlfANQbJLfmLN3WO2ISeXXcxjbqgX5WsqaKLu4pQE"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/50 to-transparent"></div>
+<h2 class="relative font-display-lg text-display-lg text-on-surface italic ink-bleed-animation z-10 select-none">
+                    A. Harrison
+                </h2>
+</div>
+<button class="font-label-md text-label-md bg-on-surface text-surface px-lg py-md rounded-lg hover:bg-tertiary transition-colors duration-300 shadow-sm flex items-center gap-sm">
+<span>Start Crafting</span>
+<span class="material-symbols-outlined text-[18px]">draw</span>
+</button>
+</section>
+<!-- Divider -->
+<div class="w-full max-w-container-max px-lg">
+<hr class="border-t border-outline-variant/30 w-24 mx-auto my-xl"/>
+</div>
+<!-- Core Features Section (Bento Grid Style) -->
+<section class="w-full max-w-container-max px-lg py-xl">
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+<!-- Feature 1: Template Customization -->
+<div class="col-span-1 md:col-span-7 bg-surface-container-low border border-surface-variant rounded-xl overflow-hidden group relative min-h-[400px] flex flex-col justify-end p-lg">
+<img alt="Curated Signatures" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-60 mix-blend-luminosity" data-alt="A collection of beautifully styled signature templates laid out on a polished wooden desk alongside vintage calligraphy tools. The aesthetic is warm and editorial, emphasizing the contrast between the dark ink and the soft, textured cream paper under natural, diffused lighting. The image captures a sense of meticulous curation and historical craftsmanship blended with modern utility." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDmt9ySFKpZeKqNEFcH--Q1MqBX4wvloutPo9RTulk8bEvK5cXn-hoor8HSl2DuAIs59r6CslkGGGXxfdOOQ9p9w-3Ci1fYvFGzOQK3FXmpV-IvoGctEIFotOrDWEvfJM-qmL7-gA2FAeVbqhS9wJPlvLeoyiAN0_ZmCGxoqKh-1pTCmCIoRmfljgIfW0FdaYKr_AYThh4wy67_JpvwjkysrYrcB2lgZPZOc4Djxd5ANGq3DGxUIXybqqdHwXkXqk9s6q2Ozro0d6Q"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest via-surface-container-lowest/80 to-transparent"></div>
+<div class="relative z-10">
+<div class="inline-flex items-center justify-center px-sm py-xs border border-outline-variant rounded-full mb-md bg-surface-container-lowest/80 backdrop-blur-sm">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">01. Curation</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-sm">Template Customization</h3>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-md">
+                            Begin with our library of curated artist signatures. Adjust slant, weight, and flourish to match your personal aesthetic, anchoring your identity in classical forms.
+                        </p>
+</div>
+</div>
+<!-- Feature 2: Handwriting Refinement -->
+<div class="col-span-1 md:col-span-5 bg-surface-container border border-surface-variant rounded-xl overflow-hidden group relative min-h-[400px] flex flex-col justify-end p-lg">
+<img alt="Sketch Upload" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-50 mix-blend-multiply" data-alt="A close-up shot of a fountain pen resting next to a rough pencil sketch of a signature on a handmade journal page. An antique glass ink bottle sits slightly out of focus in the background. The mood is intimate and creative, capturing the tactile process of turning a raw idea into a refined digital mark. Lighting is focused and dramatic, highlighting the texture of the paper." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC_vBMFOPQdehIA-f5TwSB7kI5eqO61UvdWtZ5G7vb4sv6G2TCtks2HdgpMgFjROFApG0nWrg_a79cB-7Mjyr9aNBCqhdylMXpciSNEIsXMWawsL8csUqEgQNsO3wp9Vpdjt73EBD9VlyJilHF6ZyfAopzQRebZMp__zPj07NW7k0svGhzmSHtv9dktAW5AWUbaql3kMCy0GIYEVFLaYVYbHM3kAH6muNs4Ad1fgylsCJro_2vJGj1YwHIDGSKxntZ8_BO0xcP2sC4"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container via-surface-container/90 to-transparent"></div>
+<div class="relative z-10">
+<div class="inline-flex items-center justify-center px-sm py-xs border border-outline-variant rounded-full mb-md bg-surface-container/80 backdrop-blur-sm">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">02. Translation</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-sm">Handwriting Refinement</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                            Upload a raw sketch. Our AI interprets your natural strokes, refining inconsistencies while preserving the soul and intent of your original hand.
+                        </p>
+</div>
+</div>
+<!-- Feature 3: Mastery -->
+<div class="col-span-1 md:col-span-12 bg-surface-container-highest border border-surface-variant rounded-xl overflow-hidden group relative min-h-[480px] flex flex-col md:flex-row items-center justify-between p-lg md:p-xl gap-xl">
+<div class="relative z-10 md:w-1/2 order-2 md:order-1">
+<div class="inline-flex items-center justify-center px-sm py-xs border border-outline-variant rounded-full mb-md bg-surface-container-highest/80 backdrop-blur-sm">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">03. Practice</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-sm">The Path to Mastery</h3>
+<p class="font-body-lg text-body-lg text-on-surface-variant mb-lg">
+                            It is not enough to generate a signature; one must own it. Utilize our guided tracing interfaces and rhythm analysis to learn the precise physical movements required to flawlessly execute your new mark in the physical world.
+                        </p>
+<button class="font-label-md text-label-md text-on-surface border border-outline px-md py-sm rounded-lg hover:bg-surface-container-low transition-colors duration-300 inline-flex items-center gap-sm">
+<span>Explore the Curriculum</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+<div class="relative z-10 md:w-1/2 h-[300px] md:h-full w-full rounded-lg overflow-hidden order-1 md:order-2 border border-surface-variant/50">
+<img alt="Mastery Practice" class="absolute inset-0 w-full h-full object-cover opacity-80" data-alt="An elegant workspace featuring a practice sheet filled with repeated, elegant signature strokes. A hand loosely holds a high-quality pen, caught mid-motion. The setting is bathed in warm, soft light, highlighting the premium 'Artist's Studio' aesthetic and the dedication to craftsmanship. The image conveys focus, repetition, and the physical act of writing." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDHot9nVhFXktrNFts-xbNJ-0CmMCqffCS6qsZ84cfPTBjWEEFsqJNVCKr8Uu_zUT1hJDstNfVsqtsOIfPcYzEOxqxww2-5XmhLGRZX4f1yDha_Vc8iSa1ZhT2PiJdkKcq3qar1c7C3ATCj9_Axl--uGKSaUy6XEGEVZKb_Ncj_3mc-RiQw5id1cqH8WhFBNHX9RhkNBWgBl9PgT50CP5Iuw9X3WvEzF-FRe8y0BGOrUlePA-oma8M8zo547oMtPVoVnzhK6rFXKY"/>
+</div>
+</div>
+</div>
+</section>
+<!-- Call to Action Banner -->
+<section class="w-full max-w-container-max px-lg py-xxl text-center">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-md">Ready to make your mark?</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mb-xl max-w-md mx-auto">
+                Step into the studio and begin crafting a signature that truly represents you.
+            </p>
+<button class="font-label-md text-label-md bg-on-surface text-surface px-xl py-md rounded-lg hover:bg-tertiary transition-colors duration-300 shadow-sm">
+                Enter the Studio
+            </button>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-surface-container-low dark:bg-surface-container-lowest w-full py-xl border-t border-outline-variant/30 mt-auto">
+<div class="flex flex-col md:flex-row justify-between items-center w-full px-lg max-w-container-max mx-auto gap-md">
+<div class="font-headline-sm text-headline-sm text-on-surface-variant dark:text-on-surface opacity-50">
+                InkFlow AI
+            </div>
+<div class="font-body-md text-body-md text-secondary dark:text-secondary-fixed text-center md:text-left">
+                © 2024 InkFlow AI. Handcrafted for the digital artist.
+            </div>
+<nav class="flex flex-wrap justify-center gap-md">
+<a class="font-label-sm text-label-sm text-on-surface-variant dark:text-on-secondary-fixed-variant hover:text-tertiary underline-offset-4 hover:underline transition-all" href="#">Terms of Service</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant dark:text-on-secondary-fixed-variant hover:text-tertiary underline-offset-4 hover:underline transition-all" href="#">Privacy Policy</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant dark:text-on-secondary-fixed-variant hover:text-tertiary underline-offset-4 hover:underline transition-all" href="#">License Agreement</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant dark:text-on-secondary-fixed-variant hover:text-tertiary underline-offset-4 hover:underline transition-all" href="#">Studio Guide</a>
+</nav>
+</div>
+</footer>
+<script>
+        // Simple script to ensure the animation triggers nicely on load
+        document.addEventListener("DOMContentLoaded", () => {
+            const heading = document.querySelector('.ink-bleed-animation');
+            if(heading) {
+                heading.style.opacity = '1';
+            }
+        });
+    </script>
+</body></html>

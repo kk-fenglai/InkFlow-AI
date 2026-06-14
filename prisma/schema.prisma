@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("INKFLOW_DATABASE_URL")
+}
+
+model User {
+  id                 String              @id @default(cuid())
+  email              String              @unique
+  passwordHash       String?
+  name               String?
+  credits            Int                 @default(5)
+  plan               String              @default("free")
+  role               String              @default("user")
+  subscriptionEnd    DateTime?
+  stripeCustomerId   String?             @unique
+  emailVerifiedAt    DateTime?
+  aiTuneUseCount     Int                 @default(0)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  transactions       CreditTransaction[]
+  purchases          CreditPurchase[]
+  signatures         SavedSignature[]
+  templateUnlocks    TemplateUnlock[]
+  signAudits         SignAudit[]
+  payContracts       PayContract[]
+  subscriptionRecords SubscriptionRecord[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model TemplateUnlock {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  baseId    String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, baseId])
+  @@index([userId])
+}
+
+model SavedSignature {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  strokeData String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId, createdAt])
+}
+
+model CreditTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Int
+  reason    String
+  createdAt DateTime @default(now())
+}
+
+model CreditPurchase {
+  id                    String        @id @default(cuid())
+  userId                String
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeSessionId       String        @unique
+  stripePaymentIntentId String?
+  packId                String?
+  purchaseType          String        @default("credits")
+  credits               Int
+  amountCents           Int
+  currency              String        @default("usd")
+  status                String        @default("pending")
+  refundedCents         Int           @default(0)
+  paidAt                DateTime?
+  expiresAt             DateTime?
+  contractId            String?
+  contract              PayContract?  @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  refunds               RefundOrder[]
+  createdAt             DateTime      @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model PayContract {
+  id                   String           @id @default(cuid())
+  userId               String
+  user                 User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planCode             String           @default("pro_monthly")
+  stripeCustomerId     String?
+  stripeSubscriptionId String?          @unique
+  status               String           @default("pending")
+  nextChargeAt         DateTime?
+  lastChargeAt         DateTime?
+  failedCount          Int              @default(0)
+  purchases            CreditPurchase[]
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  @@index([userId, status])
+}
+
+model SubscriptionRecord {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan             String
+  creditsGranted   Int      @default(0)
+  periodEnd        DateTime?
+  sourcePurchaseId String?
+  contractId       String?
+  createdAt        DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model RefundOrder {
+  id               String         @id @default(cuid())
+  purchaseId       String
+  purchase         CreditPurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  amountCents      Int
+  creditsClawedBack Int           @default(0)
+  status           String         @default("pending")
+  reason           String?
+  stripeRefundId   String?
+  operatorId       String?
+  createdAt        DateTime       @default(now())
+}
+
+model SignAudit {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileName  String
+  level     String   @default("SES")
+  pageCount Int      @default(1)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}

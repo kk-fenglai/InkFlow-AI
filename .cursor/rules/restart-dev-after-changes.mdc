@@ -1,0 +1,15 @@
+---
+description: Restart InkFlow dev server after code changes
+alwaysApply: true
+---
+
+After completing any implementation, fix, or meaningful code change in this project:
+
+1. Stop any process on ports 3000/3001 if needed.
+2. Run `npm run db:push` when `prisma/schema.prisma` or migrations changed.
+3. Start `npm run dev` in the background from the project root.
+4. Confirm the server is ready at http://localhost:3000 (or report the alternate port).
+
+This Next.js app serves both frontend pages and `/api/*` backend routes in one dev process — restarting `npm run dev` refreshes both.
+
+Briefly tell the user the server was refreshed and the URL to open.
