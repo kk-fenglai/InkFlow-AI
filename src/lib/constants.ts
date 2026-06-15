@@ -45,7 +45,7 @@ export const CREDIT_PACKS = [
     id: "pack_10",
     credits: 10,
     label: "10 Credits",
-    priceUsd: 0.5,
+    priceUsd: 0.58,
     description: "Try final ink, cloud saves, and PDF signing.",
   },
   {
