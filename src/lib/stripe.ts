@@ -12,7 +12,11 @@ export function getPack(packId: string) {
 }
 
 export function isStripeConfigured(): boolean {
-  return Boolean(process.env.STRIPE_SECRET_KEY?.startsWith("sk_"));
+  const key = process.env.STRIPE_SECRET_KEY?.trim() ?? "";
+  if (!key.startsWith("sk_")) return false;
+  if (key.length < 24) return false;
+  if (key.includes("...")) return false;
+  return true;
 }
 
 export function packIdToCredits(packId: CreditPackId): number {

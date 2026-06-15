@@ -64,13 +64,22 @@ export async function POST(req: Request) {
       cancelUrl: checkoutCancelUrl(purchase.id, origin),
       customerEmail: user.email,
     });
-  } catch {
+  } catch (err) {
+    console.error("[stripe/checkout]", err);
     await prisma.creditPurchase.update({
       where: { id: purchase.id },
       data: { status: "failed" },
     });
+    const detail =
+      process.env.NODE_ENV === "development" && err instanceof Error
+        ? err.message
+        : undefined;
     return NextResponse.json(
-      { error: "Stripe checkout unavailable, please retry.", code: "STRIPE_CHECKOUT_FAILED" },
+      {
+        error: "Stripe checkout unavailable, please retry.",
+        code: "STRIPE_CHECKOUT_FAILED",
+        ...(detail ? { detail } : {}),
+      },
       { status: 502 },
     );
   }

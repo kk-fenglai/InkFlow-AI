@@ -33,31 +33,25 @@ export async function createCreditCheckoutSession(input: {
   const amountCents = Math.round(input.pack.priceUsd * 100);
   const stripePriceId = stripePriceIdForPack(input.pack.id);
 
-  const paymentMethodTypes: Stripe.Checkout.SessionCreateParams.PaymentMethodType[] =
-    WALLET_METHODS ? ["card", "wechat_pay", "alipay"] : ["card"];
+  const dynamicLineItem: Stripe.Checkout.SessionCreateParams.LineItem = {
+    quantity: 1,
+    price_data: {
+      currency: "usd",
+      unit_amount: amountCents,
+      product_data: {
+        name: `InkFlow AI — ${input.pack.label}`,
+        description: input.pack.description,
+      },
+    },
+  };
 
-  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = stripePriceId
-    ? [{ price: stripePriceId, quantity: 1 }]
-    : [
-        {
-          quantity: 1,
-          price_data: {
-            currency: "usd",
-            unit_amount: amountCents,
-            product_data: {
-              name: `InkFlow AI — ${input.pack.label}`,
-              description: input.pack.description,
-            },
-          },
-        },
-      ];
+  const lineItemSets: Stripe.Checkout.SessionCreateParams.LineItem[][] =
+    stripePriceId
+      ? [[{ price: stripePriceId, quantity: 1 }], [dynamicLineItem]]
+      : [[dynamicLineItem]];
 
-  return stripe.checkout.sessions.create({
-    mode: "payment",
-    payment_method_types: paymentMethodTypes,
-    ...(WALLET_METHODS
-      ? { payment_method_options: { wechat_pay: { client: "web" } } }
-      : {}),
+  const sessionBase = (lineItems: Stripe.Checkout.SessionCreateParams.LineItem[]) => ({
+    mode: "payment" as const,
     line_items: lineItems,
     success_url: input.successUrl,
     cancel_url: input.cancelUrl,
@@ -70,4 +64,39 @@ export async function createCreditCheckoutSession(input: {
       credits: String(input.pack.credits),
     },
   });
+
+  const methodSets: Stripe.Checkout.SessionCreateParams.PaymentMethodType[][] =
+    WALLET_METHODS
+      ? [["card", "wechat_pay", "alipay"], ["card"]]
+      : [["card"]];
+
+  let lastError: unknown;
+  for (const lineItems of lineItemSets) {
+    for (const paymentMethodTypes of methodSets) {
+      try {
+        return await stripe.checkout.sessions.create({
+          ...sessionBase(lineItems),
+          payment_method_types: paymentMethodTypes,
+          ...(paymentMethodTypes.includes("wechat_pay")
+            ? { payment_method_options: { wechat_pay: { client: "web" } } }
+            : {}),
+        });
+      } catch (err) {
+        lastError = err;
+        const msg = err instanceof Error ? err.message : "";
+        const isLastMethod = paymentMethodTypes.length === 1;
+        const isLastLineItems = lineItems === lineItemSets[lineItemSets.length - 1];
+        if (!isLastMethod) {
+          console.warn("[stripe] wallet checkout failed, retrying card-only:", msg);
+          continue;
+        }
+        if (!isLastLineItems && /recurring price|one-time prices/i.test(msg)) {
+          console.warn("[stripe] configured price invalid for one-time checkout, using price_data:", msg);
+          break;
+        }
+      }
+    }
+  }
+
+  throw lastError ?? new Error("Stripe checkout session creation failed");
 }
