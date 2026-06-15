@@ -9,7 +9,7 @@ export const CREDIT_COST = {
 } as const;
 
 /** AI natural-language tune: charge 1 credit every N uses. */
-export const AI_TUNE_USES_PER_CREDIT = 5;
+export const AI_TUNE_USES_PER_CREDIT = 3;
 
 export const FREE_STARTER_CREDITS = 5;
 
@@ -35,7 +35,7 @@ export const CREDIT_USAGE_ITEMS = [
   },
   { action: "Premium template unlock (permanent)", cost: CREDIT_COST.TEMPLATE_UNLOCK, free: false },
   { action: "Sign PDF (SES — Simple E-Signature)", cost: CREDIT_COST.SIGN_PDF, free: false },
-  { action: "Live preview & Learning practice", cost: 0, free: true },
+  { action: "Live preview & watermarked export", cost: 0, free: true },
   { action: "10 free signature templates", cost: 0, free: true },
 ] as const;
 
@@ -94,12 +94,11 @@ export const PRICING_TIERS = [
     priceLabel: "Free",
     priceUsd: 0,
     period: "",
-    description: "Explore the atelier with live previews and practice tools.",
+    description: "Explore the atelier with live previews.",
     features: [
       "Live signature preview",
       "10 free signature templates",
       "40 premium templates (1 cr unlock)",
-      "Practice canvas (Learning)",
       "Refinement Workbench (free export)",
     ],
     cta: "Start Crafting",

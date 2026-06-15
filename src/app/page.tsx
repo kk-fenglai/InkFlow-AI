@@ -97,39 +97,6 @@ export default function HomePage() {
               </p>
             </div>
           </Link>
-
-          {/* Feature 3 – Mastery */}
-          <div className="md:col-span-12 bg-surface-container-highest border border-surface-variant rounded-xl overflow-hidden relative min-h-[320px] sm:min-h-[480px] flex flex-col md:flex-row items-center justify-between p-md sm:p-lg md:p-xl gap-lg sm:gap-xl">
-            <div className="relative z-10 md:w-1/2 order-2 md:order-1">
-              <Badge>03. Practice</Badge>
-              <h3 className="font-headline-md text-headline-md text-on-surface mb-sm">
-                The Path to Mastery
-              </h3>
-              <p className="font-body-lg text-body-lg text-on-surface-variant mb-lg">
-                It is not enough to generate a signature; one must own it.
-                Utilize our guided tracing interface and rhythm analysis to
-                learn the precise physical movements required to flawlessly
-                execute your new mark in the physical world.
-              </p>
-              <Link
-                href="/learn"
-                className="font-label-md text-label-md text-on-surface border border-outline px-md py-sm rounded-lg hover:bg-surface-container-low transition-colors duration-300 inline-flex items-center gap-sm"
-              >
-                <span>Explore the Curriculum</span>
-                <span className="material-symbols-outlined text-[16px]">
-                  arrow_forward
-                </span>
-              </Link>
-            </div>
-            <div className="relative z-10 md:w-1/2 h-[300px] md:h-full w-full rounded-lg overflow-hidden order-1 md:order-2 border border-surface-variant/50">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                alt="An elegant workspace featuring a practice sheet filled with repeated, elegant signature strokes."
-                className="absolute inset-0 w-full h-full object-cover opacity-80"
-                src="/images/feature-mastery.png"
-              />
-            </div>
-          </div>
         </div>
       </section>
 

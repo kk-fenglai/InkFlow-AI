@@ -1,5 +1,6 @@
 import type { ArtistBaseId, SignatureSettings } from "@/lib/signature";
 import { ARTIST_BASE_IDS } from "@/lib/signature";
+import { chatCompletionsUrl, getLlmTuneConfig } from "@/lib/llm-tune-config";
 
 export interface TuneResult {
   settings: SignatureSettings;
@@ -161,13 +162,13 @@ export function tuneFromRules(
   };
 }
 
-/** Optional OpenAI structured tuning when OPENAI_API_KEY is set. */
+/** Optional LLM tuning (DeepSeek / OpenAI-compatible) when API key is set. */
 export async function tuneFromLlm(
   instruction: string,
   settings: SignatureSettings,
 ): Promise<TuneResult | null> {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) return null;
+  const llm = getLlmTuneConfig();
+  if (!llm) return null;
 
   const system = `You adjust signature rendering parameters based on user instructions.
 Return ONLY valid JSON with keys: fluidity, rhythm, pressure, slant, size, baseId, note.
@@ -188,14 +189,14 @@ Keep deltas modest (typically -20..20 for 1-100 params, -0.15..0.15 for size).`;
   };
 
   try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    const res = await fetch(chatCompletionsUrl(llm), {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${llm.apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
+        model: llm.model,
         temperature: 0.3,
         response_format: { type: "json_object" },
         messages: [
@@ -205,7 +206,13 @@ Keep deltas modest (typically -20..20 for 1-100 params, -0.15..0.15 for size).`;
       }),
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      console.warn(
+        `[nl-tune] ${llm.provider} request failed (${res.status}): ${errText.slice(0, 200)}`,
+      );
+      return null;
+    }
 
     const data = (await res.json()) as {
       choices?: { message?: { content?: string } }[];
@@ -235,7 +242,8 @@ Keep deltas modest (typically -20..20 for 1-100 params, -0.15..0.15 for size).`;
       source: "llm",
       applied: ["llm structured tuning"],
     };
-  } catch {
+  } catch (err) {
+    console.warn("[nl-tune] LLM request error:", err);
     return null;
   }
 }

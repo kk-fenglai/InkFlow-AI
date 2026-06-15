@@ -109,7 +109,6 @@ function AccountDashboard() {
               <QuickLink href="/studio" icon="draw" label="Hand-drawn AI" />
               <QuickLink href="/sign" icon="draw" label="Sign PDF" />
               <QuickLink href="/refine" icon="auto_awesome" label="Refinement" />
-              <QuickLink href="/learn" icon="menu_book" label="Learning" />
             </div>
           </section>
 

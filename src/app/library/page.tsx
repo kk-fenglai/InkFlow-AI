@@ -260,12 +260,6 @@ export default function CloudLibraryPage() {
                   >
                     Sign PDF
                   </Link>
-                  <Link
-                    href="/learn"
-                    className="block w-full py-sm mb-sm text-center border border-tertiary text-tertiary rounded font-label-md hover:bg-tertiary/10"
-                  >
-                    Practice in Learning
-                  </Link>
                   <button
                     type="button"
                     onClick={() => void handleDelete(selected.id, selected.name)}

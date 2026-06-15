@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { trackEvent } from "@/lib/analytics";
+import { AI_TUNE_USES_PER_CREDIT } from "@/lib/constants";
 
 const STORAGE_KEY = "inkflow-onboarding-done";
 
@@ -36,7 +37,7 @@ export default function OnboardingBanner() {
           Welcome to InkFlow AI
         </p>
         <p className="font-body-md text-body-md text-on-surface-variant mt-xs">
-          Pick a template, tune your ink (5 uses = 1 cr), save free templates to cloud,
+          Pick a template, tune your ink ({AI_TUNE_USES_PER_CREDIT} uses = 1 cr), save free templates to cloud,
           refine handwriting for free, then sign PDFs (1 cr) on{" "}
           <Link href="/sign" className="text-tertiary underline">
             Sign

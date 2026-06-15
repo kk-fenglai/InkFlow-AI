@@ -11,7 +11,6 @@ const NAV_LINKS = [
   { href: "/library", label: "Cloud Library" },
   { href: "/sign", label: "Sign PDF" },
   { href: "/refine", label: "Refinement" },
-  { href: "/learn", label: "Learning" },
   { href: "/pricing", label: "Pricing" },
 ];
 

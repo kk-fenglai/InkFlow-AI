@@ -1,4 +1,3 @@
-import { generateStrokeData } from "@/lib/stroke-data";
 import type { SignatureStrokeData } from "@/lib/stroke-data";
 import {
   isValidBaseId,
@@ -186,22 +185,7 @@ export function saveFromStudio(
   });
 }
 
-/** Save current Studio settings as a Learning template (free, client-side). */
-export function saveTemplateFromSettings(
-  settings: SignatureSettings,
-  canvasWidth = 600,
-  canvasHeight = 240,
-  name?: string,
-): SavedSignature {
-  const strokeData = generateStrokeData(settings, canvasWidth, canvasHeight);
-  const label =
-    name?.trim() ||
-    settings.text.trim() ||
-    "My Template";
-  return saveFromStudio(strokeData, label);
-}
-
-/** Auto-sync latest Studio canvas state for Learning import. */
+/** Auto-sync latest Studio canvas state for session restore. */
 export function saveStudioDraft(
   draft: Omit<StudioDraft, "updatedAt">,
 ): void {
@@ -243,18 +227,6 @@ export function getStudioDraft(): StudioDraft | null {
   } catch {
     return null;
   }
-}
-
-/** Import the latest Studio draft into the Learning library. */
-export function importStudioDraft(name?: string): SavedSignature | null {
-  const draft = getStudioDraft();
-  if (!draft?.settings?.text) return null;
-  return saveTemplateFromSettings(
-    draft.settings,
-    draft.canvasWidth,
-    draft.canvasHeight,
-    name ?? draft.settings.text.trim(),
-  );
 }
 
 export function formatSavedAt(iso: string): string {

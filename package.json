@@ -5,12 +5,15 @@
   "description": "InkFlow AI – Artisan Edition: an AI artistic signature studio (Next.js + TypeScript + Tailwind)",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
-    "db:seed": "npx tsx prisma/seed.ts"
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:seed": "npx tsx prisma/seed.ts",
+    "vercel:env": "node scripts/push-vercel-env.mjs"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"

@@ -30,6 +30,7 @@ import { generateStrokeData } from "@/lib/stroke-data";
 import type { SignatureStrokeData } from "@/lib/stroke-data";
 import { saveCloudSignature } from "@/lib/signature-api";
 import { CREDIT_COST, AI_TUNE_USES_PER_CREDIT } from "@/lib/constants";
+import { tuneFromRules } from "@/lib/nl-tune";
 import { downloadCanvasPng } from "@/lib/canvas-export";
 import { useTemplateUnlocks } from "@/hooks/useTemplateUnlocks";
 
@@ -116,6 +117,10 @@ export default function StudioPage() {
   const [rendered, setRendered] = useState(false);
   const [busy, setBusy] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
+  const [tuneFeedback, setTuneFeedback] = useState<{
+    tone: "success" | "error" | "info";
+    text: string;
+  } | null>(null);
   const [aiNote, setAiNote] = useState("");
   const [nlInstruction, setNlInstruction] = useState(initial.nlInstruction);
   const [lastStrokeData, setLastStrokeData] = useState<SignatureStrokeData | null>(
@@ -321,54 +326,87 @@ export default function StudioPage() {
 
   async function tuneWithAi() {
     if (!nlInstruction.trim()) {
-      setStatusMsg("Describe how you want to adjust the signature.");
+      setTuneFeedback({
+        tone: "error",
+        text: "Describe how you want to adjust the signature.",
+      });
       return;
     }
+
     setBusy(true);
-    setStatusMsg("");
+    setTuneFeedback(null);
     setAiNote("");
-    try {
-      const res = await fetch("/api/tune", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ instruction: nlInstruction, settings }),
-      });
-      const data = await res.json();
 
-      if (res.status === 401) {
-        setStatusMsg("Sign in to use AI tuning.");
-        return;
-      }
-      if (res.status === 402) {
-        setStatusMsg(
-          data.error ??
-            `Need 1 credit every ${AI_TUNE_USES_PER_CREDIT} AI tunes (${data.credits ?? 0} left).`,
-        );
-        return;
-      }
-      if (!res.ok) {
-        setStatusMsg(data.error ?? "Tuning failed.");
-        return;
-      }
-
-      const tuned = data.settings as SignatureSettings;
+    const applyTuned = (tuned: SignatureSettings) => {
       setFluidity(tuned.fluidity);
       setRhythm(tuned.rhythm);
       setPressure(tuned.pressure);
       setSlant(tuned.slant);
       setSize(Math.round(tuned.size * 100));
       if (tuned.baseId) setBaseId(tuned.baseId);
+    };
+
+    if (!authenticated) {
+      const result = tuneFromRules(nlInstruction, settings);
+      applyTuned(result.settings);
+      setAiNote(`${result.aiNote} (offline rules)`);
+      setTuneFeedback({
+        tone: "info",
+        text: "Applied with offline rules. Sign in to track usage and enable server AI when configured.",
+      });
+      setBusy(false);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/tune", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instruction: nlInstruction, settings }),
+      });
+      const data = await res.json();
+
+      if (res.status === 401) {
+        setTuneFeedback({
+          tone: "error",
+          text: "Session expired — please sign in again.",
+        });
+        return;
+      }
+      if (res.status === 402) {
+        setTuneFeedback({
+          tone: "error",
+          text:
+            data.error ??
+            `Need 1 credit every ${AI_TUNE_USES_PER_CREDIT} AI tunes (${data.credits ?? 0} left).`,
+        });
+        return;
+      }
+      if (!res.ok) {
+        setTuneFeedback({
+          tone: "error",
+          text: data.error ?? "Tuning failed. Try again.",
+        });
+        return;
+      }
+
+      applyTuned(data.settings as SignatureSettings);
       setAiNote(
-        `${data.aiNote}${data.source === "llm" ? " (LLM)" : " (rules)"}`,
+        `${data.aiNote}${data.source === "llm" ? " (AI)" : " (rules)"}`,
       );
-      setStatusMsg(
-        data.charged
-          ? `AI tuned — 1 credit used (${data.creditsRemaining} left). Next ${AI_TUNE_USES_PER_CREDIT} uses free in this cycle.`
-          : `AI tuned — ${data.usesUntilCharge ?? "?"} more free tune(s) before next credit.`,
-      );
+      setTuneFeedback({
+        tone: "success",
+        text: data.charged
+          ? `Applied — 1 credit used (${data.creditsRemaining} left). Next ${AI_TUNE_USES_PER_CREDIT} uses free in this cycle.`
+          : `Applied — ${data.usesUntilCharge ?? "?"} more free tune(s) before next credit.`,
+      });
       refresh();
     } catch {
-      setStatusMsg("Network error. Try again.");
+      setTuneFeedback({
+        tone: "error",
+        text: "Network error. Check your connection and try again.",
+      });
     } finally {
       setBusy(false);
     }
@@ -419,7 +457,7 @@ export default function StudioPage() {
       downloadCanvasPng(exportCanvas, `${safeName(text)}.png`);
       setRendered(true);
       setStatusMsg(
-        `Final ink exported. ${data.creditsRemaining} credit(s) remaining. Save to Cloud for Learning.`,
+        `Final ink exported. ${data.creditsRemaining} credit(s) remaining. Save to Cloud Library when ready.`,
       );
       refresh();
     } catch {
@@ -572,13 +610,22 @@ export default function StudioPage() {
               <p className="font-body-md text-body-md text-on-surface-variant mt-sm">
                 Describe the signature style you want — AI adjusts fluidity, rhythm,
                 pressure, and slant for you.
+                {!authenticated && (
+                  <>
+                    {" "}
+                    <Link href="/login" className="text-tertiary underline">
+                      Sign in
+                    </Link>{" "}
+                    to sync usage ({AI_TUNE_USES_PER_CREDIT} uses = 1 credit).
+                  </>
+                )}
               </p>
             </div>
             <textarea
               id="nl-tune"
               value={nlInstruction}
               onChange={(e) => setNlInstruction(e.target.value)}
-              placeholder={`e.g.\n"Make it more fluid and connected"\n"More formal — suitable for business contracts"\n"Thicker strokes, extend the final flourish"\n"Slight forward slant, more dynamic"`}
+              placeholder={`e.g.\n"Make it more fluid and connected"\n"更流畅、更有商务感"\n"Thicker strokes, extend the final flourish"`}
               rows={5}
               maxLength={200}
               className="w-full min-h-[140px] bg-surface-container-lowest border border-outline-variant rounded-lg px-md py-md font-body-lg text-body-lg text-on-surface resize-y focus:border-tertiary outline-none leading-relaxed"
@@ -596,6 +643,20 @@ export default function StudioPage() {
                 {busy ? "Applying…" : "Apply AI Tune"}
               </button>
             </div>
+            {tuneFeedback && (
+              <p
+                className={`font-body-md text-body-md rounded-lg px-md py-sm ${
+                  tuneFeedback.tone === "error"
+                    ? "bg-error/10 text-error"
+                    : tuneFeedback.tone === "success"
+                      ? "bg-tertiary/10 text-on-surface"
+                      : "bg-surface-container-low text-on-surface-variant"
+                }`}
+                role="status"
+              >
+                {tuneFeedback.text}
+              </p>
+            )}
             {aiNote && (
               <p className="font-body-md text-body-md text-tertiary/90 border-t border-tertiary/20 pt-md">
                 {aiNote}
