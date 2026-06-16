@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { normalizeEmail } from "@/lib/auth/password";
 import { appOrigin } from "@/lib/payments/urls";
+import { passwordResetEmailHtml, sendEmail } from "@/lib/email/send";
 
 export async function POST(req: Request) {
   let body: { email?: string };
@@ -37,6 +38,17 @@ export async function POST(req: Request) {
         message: "If the email exists, a reset link was sent.",
         devResetUrl: resetUrl,
       });
+    }
+
+    const sent = await sendEmail({
+      to: email,
+      subject: "Reset your InkFlow AI password",
+      html: passwordResetEmailHtml(resetUrl),
+      text: `Reset your InkFlow AI password: ${resetUrl}\n\nLink expires in 1 hour.`,
+    });
+
+    if (!sent.ok) {
+      console.error("[forgot-password] email failed:", sent.error);
     }
   }
 
