@@ -8,37 +8,47 @@ interface Props {
 }
 
 const SIZES = {
-  sm: "w-10 h-10 text-sm",
-  md: "w-16 h-16 text-xl",
-  lg: "w-24 h-24 text-3xl",
+  sm: { box: "w-10 h-10 text-sm", icon: "text-[20px]" },
+  md: { box: "w-16 h-16 text-xl", icon: "text-[28px]" },
+  lg: { box: "w-24 h-24 text-3xl", icon: "text-[40px]" },
 };
 
+function profileInitial(name?: string | null, email?: string | null): string | null {
+  const fromName = name?.trim();
+  if (fromName) return fromName.charAt(0).toUpperCase();
+  const fromEmail = email?.trim();
+  if (fromEmail) return fromEmail.charAt(0).toUpperCase();
+  return null;
+}
+
 /**
- * Profile avatar shown only on account-related pages (login, register, account dashboard).
- * Logged-in users see initials; guests see the Stitch placeholder photo.
+ * Profile avatar on account-related pages — initials or a person icon, no photos.
  */
 export default function AccountAvatar({ size = "md", className = "" }: Props) {
   const { data: session, status } = useSession();
-  const sizeClass = SIZES[size];
+  const { box: sizeClass, icon: iconClass } = SIZES[size];
+  const baseClass = `${sizeClass} rounded-full border-2 border-tertiary/40 bg-surface-container-high flex items-center justify-center shrink-0 ${className}`;
 
-  if (status === "authenticated" && session?.user?.name) {
-    const initial = session.user.name.charAt(0).toUpperCase();
-    return (
-      <div
-        className={`${sizeClass} rounded-full border-2 border-tertiary bg-surface-container-high flex items-center justify-center font-headline-sm text-on-surface shrink-0 ${className}`}
-        aria-hidden
-      >
-        {initial}
-      </div>
-    );
+  if (status === "authenticated") {
+    const initial = profileInitial(session?.user?.name, session?.user?.email);
+    if (initial) {
+      return (
+        <div
+          className={`${baseClass} font-headline-sm text-tertiary`}
+          aria-hidden
+        >
+          {initial}
+        </div>
+      );
+    }
   }
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      alt="Studio profile"
-      src="/images/avatar.png"
-      className={`${sizeClass} rounded-full border border-outline-variant object-cover shrink-0 ${className}`}
-    />
+    <div
+      className={`${baseClass} text-on-surface-variant`}
+      aria-hidden
+    >
+      <span className={`material-symbols-outlined ${iconClass}`}>person</span>
+    </div>
   );
 }
