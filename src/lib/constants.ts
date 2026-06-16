@@ -81,7 +81,7 @@ export const SUBSCRIPTION_PLAN = {
   id: "pro_monthly",
   plan: "pro",
   label: "Studio Pro Monthly",
-  priceUsd: 9.99,
+  priceUsd: 12,
   creditsPerMonth: 50,
   description: "50 credits every month + Pro plan badge. Cancel anytime.",
 } as const;
@@ -136,8 +136,8 @@ export const PRICING_TIERS = [
   {
     id: "pro",
     name: "Studio Pro",
-    priceLabel: "$9.99/mo",
-    priceUsd: 9.99,
+    priceLabel: "$12/mo",
+    priceUsd: 12,
     period: "subscription",
     description: "Monthly subscription with 50 credits per period and Pro plan status.",
     features: [
