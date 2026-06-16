@@ -5,6 +5,9 @@ import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
 import Providers from "@/components/Providers";
 
+const MATERIAL_SYMBOLS =
+  "https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap";
+
 const libreCaslon = Libre_Caslon_Text({
   subsets: ["latin"],
   weight: ["400", "700"],
@@ -41,7 +44,9 @@ export default function RootLayout({
       lang="en"
       className={`light bg-background ${libreCaslon.variable} ${hanken.variable}`}
     >
-      <head />
+      <head>
+        <link rel="stylesheet" href={MATERIAL_SYMBOLS} />
+      </head>
       <body className="bg-background text-on-background min-h-screen flex flex-col font-body-md antialiased selection:bg-tertiary-fixed selection:text-on-tertiary-fixed">
         <Providers>
           <NavBar />

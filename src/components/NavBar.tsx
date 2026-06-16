@@ -14,20 +14,35 @@ const NAV_LINKS = [
   { href: "/pricing", label: "Pricing" },
 ];
 
-const AUTH_BTN =
-  "font-label-md text-label-md px-md py-sm rounded-lg hidden sm:inline-flex items-center justify-center min-w-[96px] h-[40px] transition-colors duration-200";
-
 function NavLink({
   href,
   label,
   active,
   onNavigate,
+  mobileChip = false,
 }: {
   href: string;
   label: string;
   active: boolean;
   onNavigate?: () => void;
+  mobileChip?: boolean;
 }) {
+  if (mobileChip) {
+    return (
+      <Link
+        href={href}
+        onClick={onNavigate}
+        className={
+          active
+            ? "shrink-0 whitespace-nowrap rounded-full border border-tertiary/30 bg-tertiary/10 px-sm py-xs font-label-md text-label-md text-tertiary"
+            : "shrink-0 whitespace-nowrap rounded-full border border-outline-variant/40 bg-surface-container-low px-sm py-xs font-label-md text-label-md text-on-surface-variant"
+        }
+      >
+        {label}
+      </Link>
+    );
+  }
+
   return (
     <Link
       href={href}
@@ -82,16 +97,16 @@ export default function NavBar() {
   );
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-surface-container bg-background/95 backdrop-blur-sm supports-[backdrop-filter]:bg-background/90">
-      <div className="mx-auto flex h-14 max-w-container-max items-center justify-between gap-sm px-md sm:h-16 sm:gap-md sm:px-lg sm:py-md">
-        <div className="flex min-w-0 items-center gap-md sm:gap-xl">
+    <header className="sticky top-0 z-50 w-full border-b border-outline-variant/40 bg-background pt-safe shadow-[0_1px_0_rgba(29,28,22,0.06)]">
+      <div className="mx-auto flex h-14 max-w-container-max items-center justify-between gap-xs px-sm sm:h-16 sm:gap-md sm:px-lg sm:py-md">
+        <div className="flex min-w-0 flex-1 items-center gap-sm sm:gap-xl">
           <Link
             href="/"
-            className="truncate font-headline-md text-[22px] leading-tight text-on-surface tracking-tight sm:text-headline-md"
+            className="truncate font-headline-md text-[20px] leading-tight text-on-surface tracking-tight sm:text-headline-md"
           >
             InkFlow AI
           </Link>
-          <nav className="hidden items-center gap-lg md:flex">
+          <nav className="hidden items-center gap-lg lg:flex">
             {NAV_LINKS.map((link) => (
               <NavLink
                 key={link.href}
@@ -104,58 +119,74 @@ export default function NavBar() {
         </div>
 
         <div className="flex shrink-0 items-center gap-xs sm:gap-md">
-          <div className="hidden sm:block">{creditsPill}</div>
+          <div className="hidden md:block">{creditsPill}</div>
 
           <Link
             href="/studio"
-            className="inline-flex h-9 items-center gap-xs rounded-lg bg-on-surface px-sm py-sm font-label-md text-label-md text-surface transition-colors duration-300 hover:bg-tertiary sm:h-[40px] sm:gap-sm sm:px-md"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-on-surface text-surface transition-colors duration-300 hover:bg-tertiary sm:h-[40px] sm:w-auto sm:gap-sm sm:px-md"
+            aria-label="Create new signature"
+            title="Create new signature"
           >
-            <span className="hidden sm:inline">Create New</span>
-            <span className="sm:hidden">Create</span>
-            <span className="material-symbols-outlined text-[18px] sm:hidden">
-              draw
+            <span className="material-symbols-outlined text-[20px]">draw</span>
+            <span className="hidden sm:inline font-label-md text-label-md">
+              Create New
             </span>
           </Link>
 
-          {!authReady ? (
+          {authReady && authenticated ? (
+            <Link
+              href="/account"
+              className="hidden md:inline-flex h-[40px] min-w-[96px] items-center justify-center rounded-lg px-md py-sm font-label-md text-label-md text-on-surface-variant transition-colors duration-200 hover:text-tertiary"
+            >
+              Account
+            </Link>
+          ) : authReady ? (
+            <Link
+              href="/login"
+              className="hidden md:inline-flex h-[40px] min-w-[96px] items-center justify-center rounded-lg border border-outline px-md py-sm font-label-md text-label-md text-on-surface transition-colors duration-200 hover:bg-surface-container-low"
+            >
+              Sign in
+            </Link>
+          ) : (
             <span
-              className={`${AUTH_BTN} bg-surface-container-low text-transparent select-none`}
+              className="hidden md:inline-flex h-[40px] min-w-[96px] select-none items-center justify-center rounded-lg bg-surface-container-low px-md py-sm font-label-md text-label-md text-transparent"
               aria-hidden
             >
               ···
             </span>
-          ) : authenticated ? (
-            <Link
-              href="/account"
-              className={`${AUTH_BTN} border border-transparent text-on-surface-variant hover:text-tertiary`}
-            >
-              Account
-            </Link>
-          ) : (
-            <Link
-              href="/login"
-              className={`${AUTH_BTN} border border-outline text-on-surface hover:bg-surface-container-low`}
-            >
-              Sign in
-            </Link>
           )}
 
           <button
             type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant/50 text-on-surface hover:bg-surface-container-low md:hidden"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-outline bg-surface-container-low text-on-surface shadow-sm lg:hidden"
             aria-expanded={menuOpen}
             aria-label={menuOpen ? "Close menu" : "Open menu"}
             onClick={() => setMenuOpen((open) => !open)}
           >
-            <span className="material-symbols-outlined text-[22px]">
+            <span className="material-symbols-outlined text-[22px]" aria-hidden>
               {menuOpen ? "close" : "menu"}
             </span>
           </button>
         </div>
       </div>
 
+      <nav
+        className="touch-scroll-x flex gap-xs overflow-x-auto border-t border-outline-variant/20 bg-surface-container-low/80 px-sm py-sm lg:hidden"
+        aria-label="Primary"
+      >
+        {NAV_LINKS.map((link) => (
+          <NavLink
+            key={link.href}
+            href={link.href}
+            label={link.label}
+            active={pathname === link.href}
+            mobileChip
+          />
+        ))}
+      </nav>
+
       <div
-        className={`fixed inset-0 z-50 md:hidden ${menuOpen ? "pointer-events-auto" : "pointer-events-none"}`}
+        className={`fixed inset-0 z-[60] lg:hidden ${menuOpen ? "pointer-events-auto" : "pointer-events-none"}`}
         aria-hidden={!menuOpen}
       >
         <button
@@ -171,7 +202,7 @@ export default function NavBar() {
             menuOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >
-          <div className="flex items-center justify-between border-b border-surface-container px-md py-md">
+          <div className="flex items-center justify-between border-b border-surface-container px-md py-md pt-safe">
             <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest">
               Menu
             </span>
