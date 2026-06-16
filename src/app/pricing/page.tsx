@@ -106,7 +106,7 @@ function SubscribeButton() {
         onClick={subscribe}
         className="w-full py-md bg-tertiary text-on-tertiary rounded font-label-md hover:bg-tertiary/90 disabled:opacity-50"
       >
-        {busy ? "Redirecting…" : `Subscribe — $${SUBSCRIPTION_PLAN.priceUsd}/mo`}
+        {busy ? "Redirecting…" : `Subscribe — ${formatPackPrice(SUBSCRIPTION_PLAN.priceEur)}/mo`}
       </button>
       {msg && (
         <p className="font-label-sm text-label-sm text-error mt-sm text-center">{msg}</p>
@@ -198,7 +198,7 @@ export default function PricingPage() {
             {SUBSCRIPTION_PLAN.label}
           </h2>
           <p className="font-display-lg text-display-lg-mobile text-on-surface">
-            ${SUBSCRIPTION_PLAN.priceUsd.toFixed(2)}
+            {formatPackPrice(SUBSCRIPTION_PLAN.priceEur)}
             <span className="font-label-md text-label-md text-on-surface-variant"> / month</span>
           </p>
           <p className="font-body-md text-body-md text-on-surface-variant mt-md mb-lg">

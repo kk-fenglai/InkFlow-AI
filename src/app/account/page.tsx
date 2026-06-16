@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import AccountAvatar from "@/components/AccountAvatar";
 import { useCredits } from "@/hooks/useCredits";
+import { SUBSCRIPTION_PLAN } from "@/lib/constants";
 
 function AccountDashboard() {
   const { data: session } = useSession();
@@ -154,7 +155,7 @@ function SubscriptionSection() {
         Subscription
       </h2>
       <p className="font-body-md text-body-md text-on-surface-variant mb-md">
-        Studio Pro subscribers receive 50 credits each billing period. Manage or
+        Studio Pro subscribers receive {SUBSCRIPTION_PLAN.creditsPerMonth} credits each billing period. Manage or
         cancel in the Stripe customer portal.
       </p>
       <div className="flex flex-wrap gap-md">

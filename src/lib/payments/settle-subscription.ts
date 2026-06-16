@@ -1,5 +1,5 @@
 import type Stripe from "stripe";
-import { SUBSCRIPTION_PLAN } from "@/lib/constants";
+import { CREDIT_PACK_CURRENCY, SUBSCRIPTION_PLAN } from "@/lib/constants";
 import { applySubscriptionPeriod } from "@/lib/billing/subscription";
 import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
@@ -125,7 +125,7 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
   const amountPaid =
     typeof invoice.amount_paid === "number"
       ? invoice.amount_paid
-      : Math.round(SUBSCRIPTION_PLAN.priceUsd * 100);
+      : Math.round(SUBSCRIPTION_PLAN.priceEur * 100);
 
   const paymentIntentId = await resolveInvoicePaymentIntentId(invoice);
 
@@ -139,7 +139,7 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
         purchaseType: "subscription",
         credits: SUBSCRIPTION_PLAN.creditsPerMonth,
         amountCents: amountPaid,
-        currency: invoice.currency ?? "usd",
+        currency: invoice.currency ?? CREDIT_PACK_CURRENCY,
         status: "completed",
         paidAt: new Date(),
         contractId: contract.id,

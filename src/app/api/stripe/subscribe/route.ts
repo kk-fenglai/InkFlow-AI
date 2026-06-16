@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { SUBSCRIPTION_PLAN, subscriptionStripePriceId } from "@/lib/constants";
+import { SUBSCRIPTION_PLAN, subscriptionStripePriceId, CREDIT_PACK_CURRENCY } from "@/lib/constants";
 import { getSessionUser } from "@/lib/session";
 import { isStripeConfigured } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
 
   const origin =
     process.env.NEXTAUTH_URL ?? req.headers.get("origin") ?? "http://localhost:3000";
-  const amountCents = Math.round(SUBSCRIPTION_PLAN.priceUsd * 100);
+  const amountCents = Math.round(SUBSCRIPTION_PLAN.priceEur * 100);
 
   const purchase = await prisma.creditPurchase.create({
     data: {
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
       purchaseType: "subscription",
       credits: SUBSCRIPTION_PLAN.creditsPerMonth,
       amountCents,
-      currency: "usd",
+      currency: CREDIT_PACK_CURRENCY,
       status: "pending",
       expiresAt: new Date(Date.now() + 30 * 60 * 1000),
     },

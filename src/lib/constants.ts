@@ -81,9 +81,9 @@ export const SUBSCRIPTION_PLAN = {
   id: "pro_monthly",
   plan: "pro",
   label: "Studio Pro Monthly",
-  priceUsd: 12,
-  creditsPerMonth: 50,
-  description: "50 credits every month + Pro plan badge. Cancel anytime.",
+  priceEur: 12,
+  creditsPerMonth: 120,
+  description: "120 credits every month + Pro plan badge. Cancel anytime.",
 } as const;
 
 export function subscriptionStripePriceId(): string | null {
@@ -136,13 +136,13 @@ export const PRICING_TIERS = [
   {
     id: "pro",
     name: "Studio Pro",
-    priceLabel: "$12/mo",
-    priceUsd: 12,
+    priceLabel: "€12/mo",
+    priceUsd: null,
     period: "subscription",
-    description: "Monthly subscription with 50 credits per period and Pro plan status.",
+    description: "Monthly subscription with 120 credits per period and Pro plan status.",
     features: [
       "Everything in Artist",
-      "50 credits every month",
+      "120 credits every month",
       "Pro plan badge on account",
       "Manage billing in Stripe portal",
       "Cancel anytime",
