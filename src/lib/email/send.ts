@@ -1,7 +1,8 @@
 /**
- * Transactional email via Resend (https://resend.com).
- * Set RESEND_API_KEY and EMAIL_FROM in env.
+ * Transactional email via Brevo SMTP (https://www.brevo.com).
+ * SMTP & API → SMTP keys in the Brevo dashboard.
  */
+import nodemailer from "nodemailer";
 
 export type SendEmailInput = {
   to: string;
@@ -10,36 +11,54 @@ export type SendEmailInput = {
   text?: string;
 };
 
-export async function sendEmail(input: SendEmailInput): Promise<{ ok: true } | { ok: false; error: string }> {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
+function smtpConfig() {
+  const host = process.env.SMTP_HOST?.trim() || "smtp-relay.brevo.com";
+  const port = Number(process.env.SMTP_PORT ?? "587");
+  const user = process.env.SMTP_USER?.trim();
+  const pass = process.env.SMTP_PASS?.trim();
   const from = process.env.EMAIL_FROM?.trim();
 
-  if (!apiKey || !from) {
-    return { ok: false, error: "RESEND_API_KEY or EMAIL_FROM not configured" };
+  if (!user || !pass || !from) {
+    return null;
   }
 
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
+  return { host, port, user, pass, from };
+}
+
+export async function sendEmail(
+  input: SendEmailInput,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const cfg = smtpConfig();
+  if (!cfg) {
+    return { ok: false, error: "SMTP_USER, SMTP_PASS, or EMAIL_FROM not configured" };
+  }
+
+  const transport = nodemailer.createTransport({
+    host: cfg.host,
+    port: cfg.port,
+    secure: cfg.port === 465,
+    auth: {
+      user: cfg.user,
+      pass: cfg.pass,
     },
-    body: JSON.stringify({
-      from,
-      to: [input.to],
+  });
+
+  try {
+    await transport.sendMail({
+      from: cfg.from,
+      to: input.to,
       subject: input.subject,
       html: input.html,
       text: input.text,
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    console.error("[email] Resend error:", res.status, body);
-    return { ok: false, error: `Resend ${res.status}` };
+    });
+    return { ok: true };
+  } catch (err) {
+    console.error("[email] Brevo SMTP error:", err);
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "SMTP send failed",
+    };
   }
-
-  return { ok: true };
 }
 
 export function passwordResetEmailHtml(resetUrl: string): string {
