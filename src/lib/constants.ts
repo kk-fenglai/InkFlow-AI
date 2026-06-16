@@ -39,33 +39,42 @@ export const CREDIT_USAGE_ITEMS = [
   { action: "10 free signature templates", cost: 0, free: true },
 ] as const;
 
-/** Stripe credit packs (test mode uses inline price_data if price IDs unset). */
+/** Stripe credit packs — prices in EUR. */
+export const CREDIT_PACK_CURRENCY = "eur" as const;
+
 export const CREDIT_PACKS = [
   {
-    id: "pack_10",
-    credits: 10,
-    label: "10 Credits",
-    priceUsd: 0.58,
+    id: "pack_20",
+    credits: 20,
+    label: "20 Credits",
+    priceEur: 5,
     description: "Try final ink, cloud saves, and PDF signing.",
   },
   {
     id: "pack_50",
     credits: 50,
     label: "50 Credits",
-    priceUsd: 1,
+    priceEur: 10,
     description: "Best for regular studio use.",
     popular: true,
   },
   {
-    id: "pack_200",
-    credits: 200,
-    label: "200 Credits",
-    priceUsd: 1.5,
+    id: "pack_120",
+    credits: 120,
+    label: "120 Credits",
+    priceEur: 15,
     description: "Volume pricing — includes commercial export rights.",
   },
 ] as const;
 
 export type CreditPackId = (typeof CREDIT_PACKS)[number]["id"];
+
+export function formatPackPrice(amount: number, currency = CREDIT_PACK_CURRENCY): string {
+  return new Intl.NumberFormat("en-IE", {
+    style: "currency",
+    currency: currency.toUpperCase(),
+  }).format(amount);
+}
 
 /** Monthly subscription (Stripe recurring). Requires STRIPE_PRICE_PRO_MONTHLY. */
 export const SUBSCRIPTION_PLAN = {

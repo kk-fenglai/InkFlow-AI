@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/session";
 import { getPack, isStripeConfigured } from "@/lib/stripe";
+import { CREDIT_PACK_CURRENCY } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { createCreditCheckoutSession } from "@/lib/payments/stripe-checkout";
 import {
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
 
   const origin =
     process.env.NEXTAUTH_URL ?? req.headers.get("origin") ?? "http://localhost:3000";
-  const amountCents = Math.round(pack.priceUsd * 100);
+  const amountCents = Math.round(pack.priceEur * 100);
   const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
   const purchase = await prisma.creditPurchase.create({
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
       packId: pack.id,
       credits: pack.credits,
       amountCents,
-      currency: "usd",
+      currency: CREDIT_PACK_CURRENCY,
       status: "pending",
       expiresAt,
     },

@@ -273,6 +273,7 @@ function PurchaseHistory() {
       packId: string | null;
       credits: number;
       amountCents: number;
+      currency: string;
       status: string;
       createdAt: string;
       paidAt: string | null;
@@ -311,7 +312,11 @@ function PurchaseHistory() {
               }`}
             >
               <span className="text-on-surface-variant">
-                {p.credits} credits · ${(p.amountCents / 100).toFixed(2)}
+                {p.credits} credits ·{" "}
+                {new Intl.NumberFormat("en-IE", {
+                  style: "currency",
+                  currency: (p.currency ?? "eur").toUpperCase(),
+                }).format(p.amountCents / 100)}
               </span>
               <span
                 className={`font-label-sm text-label-sm uppercase tracking-wide ${

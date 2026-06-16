@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
-import { CREDIT_PACKS, CREDIT_USAGE_ITEMS, PRICING_TIERS, SUBSCRIPTION_PLAN } from "@/lib/constants";
+import { CREDIT_PACKS, CREDIT_USAGE_ITEMS, formatPackPrice, PRICING_TIERS, SUBSCRIPTION_PLAN } from "@/lib/constants";
 
 function BuyButton({ packId }: { packId: string }) {
   const { status } = useSession();
@@ -245,10 +245,10 @@ export default function PricingPage() {
                 {pack.label}
               </h3>
               <p className="font-display-lg text-display-lg-mobile text-on-surface mt-sm">
-                ${pack.priceUsd.toFixed(2)}
+                {formatPackPrice(pack.priceEur)}
               </p>
               <p className="font-label-sm text-label-sm text-on-surface-variant mt-xs">
-                ${(pack.priceUsd / pack.credits).toFixed(2)} per credit
+                {formatPackPrice(pack.priceEur / pack.credits)} per credit
               </p>
               <p className="font-body-md text-body-md text-on-surface-variant mt-md mb-lg flex-grow">
                 {pack.description}
