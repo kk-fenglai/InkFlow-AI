@@ -1,7 +1,8 @@
 /**
- * Transactional email via Brevo SMTP (https://www.brevo.com).
- * SMTP & API → SMTP keys in the Brevo dashboard.
+ * Transactional email via Brevo (https://www.brevo.com).
+ * Prefer BREVO_API_KEY (HTTP API). Falls back to SMTP if set.
  */
+
 import nodemailer from "nodemailer";
 
 export type SendEmailInput = {
@@ -11,7 +12,52 @@ export type SendEmailInput = {
   text?: string;
 };
 
-function smtpConfig() {
+function parseFrom(from: string): { name: string; email: string } {
+  const match = from.match(/^(.+?)\s*<([^>]+)>$/);
+  if (match) {
+    return { name: match[1].trim(), email: match[2].trim() };
+  }
+  return { name: "InkFlow AI", email: from.trim() };
+}
+
+async function sendViaBrevoApi(
+  input: SendEmailInput,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const apiKey = process.env.BREVO_API_KEY?.trim();
+  const fromRaw = process.env.EMAIL_FROM?.trim();
+  if (!apiKey || !fromRaw) {
+    return { ok: false, error: "BREVO_API_KEY or EMAIL_FROM not configured" };
+  }
+
+  const sender = parseFrom(fromRaw);
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": apiKey,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      sender,
+      to: [{ email: input.to }],
+      subject: input.subject,
+      htmlContent: input.html,
+      textContent: input.text,
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    console.error("[email] Brevo API error:", res.status, body);
+    return { ok: false, error: `Brevo API ${res.status}: ${body.slice(0, 200)}` };
+  }
+
+  return { ok: true };
+}
+
+async function sendViaSmtp(
+  input: SendEmailInput,
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const host = process.env.SMTP_HOST?.trim() || "smtp-relay.brevo.com";
   const port = Number(process.env.SMTP_PORT ?? "587");
   const user = process.env.SMTP_USER?.trim();
@@ -19,33 +65,19 @@ function smtpConfig() {
   const from = process.env.EMAIL_FROM?.trim();
 
   if (!user || !pass || !from) {
-    return null;
-  }
-
-  return { host, port, user, pass, from };
-}
-
-export async function sendEmail(
-  input: SendEmailInput,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const cfg = smtpConfig();
-  if (!cfg) {
     return { ok: false, error: "SMTP_USER, SMTP_PASS, or EMAIL_FROM not configured" };
   }
 
   const transport = nodemailer.createTransport({
-    host: cfg.host,
-    port: cfg.port,
-    secure: cfg.port === 465,
-    auth: {
-      user: cfg.user,
-      pass: cfg.pass,
-    },
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
   });
 
   try {
     await transport.sendMail({
-      from: cfg.from,
+      from,
       to: input.to,
       subject: input.subject,
       html: input.html,
@@ -59,6 +91,18 @@ export async function sendEmail(
       error: err instanceof Error ? err.message : "SMTP send failed",
     };
   }
+}
+
+export async function sendEmail(
+  input: SendEmailInput,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (process.env.BREVO_API_KEY?.trim()) {
+    const apiResult = await sendViaBrevoApi(input);
+    if (apiResult.ok) return apiResult;
+    console.warn("[email] Brevo API failed, trying SMTP:", apiResult.error);
+  }
+
+  return sendViaSmtp(input);
 }
 
 export function passwordResetEmailHtml(resetUrl: string): string {
