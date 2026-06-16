@@ -96,7 +96,8 @@ async function sendViaSmtp(
 export async function sendEmail(
   input: SendEmailInput,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (process.env.BREVO_API_KEY?.trim()) {
+  const brevoKey = process.env.BREVO_API_KEY?.trim();
+  if (brevoKey?.startsWith("xkeysib-")) {
     const apiResult = await sendViaBrevoApi(input);
     if (apiResult.ok) return apiResult;
     console.warn("[email] Brevo API failed, trying SMTP:", apiResult.error);
