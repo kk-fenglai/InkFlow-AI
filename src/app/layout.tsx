@@ -4,6 +4,7 @@ import "./globals.css";
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
 import Providers from "@/components/Providers";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 const MATERIAL_SYMBOLS =
   "https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap";
@@ -26,12 +27,27 @@ export const metadata: Metadata = {
   title: "InkFlow AI – Artisan Edition",
   description:
     "Craft a signature that carries the weight, texture, and undeniable presence of traditional ink on paper. An AI artistic signature studio.",
+  applicationName: "InkFlow AI",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "InkFlow AI",
+  },
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: "#fef9ef",
 };
 
 export default function RootLayout({
@@ -53,6 +69,7 @@ export default function RootLayout({
           <div className="flex-grow flex flex-col">{children}</div>
           <Footer />
         </Providers>
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

@@ -1,0 +1,41 @@
+{
+  "name": "InkFlow AI – Artisan Edition",
+  "short_name": "InkFlow AI",
+  "description": "An AI artistic signature studio. Craft a signature with the weight, texture, and presence of traditional ink on paper.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fef9ef",
+  "theme_color": "#fef9ef",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["productivity", "art", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
