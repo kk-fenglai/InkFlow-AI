@@ -30,6 +30,19 @@ model User {
   payContracts       PayContract[]
   subscriptionRecords SubscriptionRecord[]
   passwordResetTokens PasswordResetToken[]
+  mobileRefreshTokens MobileRefreshToken[]
+}
+
+model MobileRefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 model PasswordResetToken {
@@ -80,8 +93,10 @@ model CreditPurchase {
   id                    String        @id @default(cuid())
   userId                String
   user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paymentProvider       String        @default("stripe")
   stripeSessionId       String        @unique
   stripePaymentIntentId String?
+  appleTransactionId    String?       @unique
   packId                String?
   purchaseType          String        @default("credits")
   credits               Int
