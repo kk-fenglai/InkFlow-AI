@@ -6,6 +6,7 @@ import SignatureCanvas, {
   type SignatureCanvasHandle,
 } from "@/components/SignatureCanvas";
 import OnboardingBanner from "@/components/OnboardingBanner";
+import VerifyEmailBanner from "@/components/VerifyEmailBanner";
 import { useCredits } from "@/hooks/useCredits";
 import { trackEvent } from "@/lib/analytics";
 import {
@@ -510,6 +511,7 @@ export default function StudioPage() {
   return (
     <main className="page-main flex flex-col gap-lg sm:gap-xl">
       <OnboardingBanner />
+      <VerifyEmailBanner />
       <div className="flex flex-col lg:flex-row gap-xl">
       {/* Left: preview + bases */}
       <div className="flex-grow flex flex-col gap-xl min-w-0">

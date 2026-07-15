@@ -1,19 +1,33 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { FREE_STARTER_CREDITS } from "@/lib/constants";
 import { normalizeEmail, validatePassword } from "@/lib/auth/password";
+import { sendVerificationEmail } from "@/lib/auth/email-verification";
 import { sessionUserFromDb } from "@/lib/auth/session-user";
 import { buildMobileAuthResponse } from "@/lib/mobile-auth/response";
 import {
   jsonWithMobileCors,
   mobileOptionsResponse,
 } from "@/lib/mobile-auth/cors";
+import { authRateLimit } from "@/lib/rate-limit";
 
 export async function OPTIONS(req: Request) {
   return mobileOptionsResponse(req);
 }
 
 export async function POST(req: Request) {
+  const rl = authRateLimit(req, "register", 5, 10 * 60_000);
+  if (!rl.ok) {
+    return jsonWithMobileCors(
+      req,
+      {
+        error: "Too many attempts. Try again shortly.",
+        code: "RATE_LIMITED",
+        retryAfterSec: rl.retryAfterSec,
+      },
+      { status: 429 },
+    );
+  }
+
   let body: { email?: string; password?: string; name?: string };
   try {
     body = await req.json();
@@ -56,13 +70,14 @@ export async function POST(req: Request) {
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
+  // Welcome credits are granted when the user verifies their email.
   const user = await prisma.user.create({
     data: {
       email,
       passwordHash,
       name,
-      credits: FREE_STARTER_CREDITS,
-      emailVerifiedAt: new Date(),
+      credits: 0,
+      emailVerifiedAt: null,
     },
     select: {
       id: true,
@@ -74,13 +89,7 @@ export async function POST(req: Request) {
     },
   });
 
-  await prisma.creditTransaction.create({
-    data: {
-      userId: user.id,
-      amount: FREE_STARTER_CREDITS,
-      reason: "welcome_bonus",
-    },
-  });
+  await sendVerificationEmail(user.id, user.email);
 
   return jsonWithMobileCors(
     req,

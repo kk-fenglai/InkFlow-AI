@@ -5,12 +5,26 @@ import {
   jsonWithMobileCors,
   mobileOptionsResponse,
 } from "@/lib/mobile-auth/cors";
+import { authRateLimit } from "@/lib/rate-limit";
 
 export async function OPTIONS(req: Request) {
   return mobileOptionsResponse(req);
 }
 
 export async function POST(req: Request) {
+  const rl = authRateLimit(req, "mobile-login", 10, 60_000);
+  if (!rl.ok) {
+    return jsonWithMobileCors(
+      req,
+      {
+        error: "Too many attempts. Try again shortly.",
+        code: "RATE_LIMITED",
+        retryAfterSec: rl.retryAfterSec,
+      },
+      { status: 429 },
+    );
+  }
+
   let body: { email?: string; password?: string };
   try {
     body = await req.json();

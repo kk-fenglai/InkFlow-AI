@@ -28,3 +28,20 @@ export function rateLimit(
 export function creditActionKey(userId: string, action: string): string {
   return `credit:${userId}:${action}`;
 }
+
+/** Best-effort client IP behind Vercel/proxies; "unknown" groups direct hits. */
+export function clientIp(req: Request): string {
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0].trim();
+  return req.headers.get("x-real-ip") ?? "unknown";
+}
+
+/** Per-IP rate limit for unauthenticated auth endpoints. */
+export function authRateLimit(
+  req: Request,
+  action: string,
+  limit: number,
+  windowMs: number,
+): { ok: true } | { ok: false; retryAfterSec: number } {
+  return rateLimit(`auth:${action}:${clientIp(req)}`, limit, windowMs);
+}

@@ -110,6 +110,25 @@ export async function sendEmail(
   return sendViaSmtp(input);
 }
 
+export function verificationEmailHtml(
+  verifyUrl: string,
+  credits: number,
+): string {
+  return `
+    <div style="font-family: Georgia, serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
+      <h1 style="font-size: 22px; font-weight: normal;">InkFlow AI</h1>
+      <p>Welcome to the studio! Verify your email to claim your <strong>${credits} free credits</strong> — link expires in 24 hours.</p>
+      <p style="margin: 28px 0;">
+        <a href="${verifyUrl}" style="background: #1a1a1a; color: #f5f0e8; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+          Verify email
+        </a>
+      </p>
+      <p style="font-size: 13px; color: #666;">If you did not create this account, ignore this email.</p>
+      <p style="font-size: 12px; color: #999; word-break: break-all;">${verifyUrl}</p>
+    </div>
+  `.trim();
+}
+
 export function passwordResetEmailHtml(resetUrl: string): string {
   return `
     <div style="font-family: Georgia, serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">

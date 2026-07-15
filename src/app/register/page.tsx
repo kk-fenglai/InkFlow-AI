@@ -50,7 +50,7 @@ function RegisterForm() {
   return (
     <AuthShell
       title="Join the studio"
-      subtitle={`Create an account and receive ${FREE_STARTER_CREDITS} free generation credits.`}
+      subtitle={`Create an account, then verify your email to claim ${FREE_STARTER_CREDITS} free generation credits.`}
       footer={
         <>
           Already have an account?{" "}

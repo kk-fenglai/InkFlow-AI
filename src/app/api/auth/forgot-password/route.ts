@@ -4,8 +4,17 @@ import { prisma } from "@/lib/prisma";
 import { normalizeEmail } from "@/lib/auth/password";
 import { appOrigin } from "@/lib/payments/urls";
 import { passwordResetEmailHtml, sendEmail } from "@/lib/email/send";
+import { authRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
+  const rl = authRateLimit(req, "forgot-password", 5, 15 * 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Too many attempts. Try again shortly.", retryAfterSec: rl.retryAfterSec },
+      { status: 429 },
+    );
+  }
+
   let body: { email?: string };
   try {
     body = await req.json();

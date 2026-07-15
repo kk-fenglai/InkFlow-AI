@@ -100,9 +100,6 @@ function LoginForm() {
           {busy ? "Signing in…" : "Sign in"}
         </button>
       </form>
-      <p className="font-label-sm text-label-sm text-on-surface-variant mt-md text-center">
-        Demo: <strong>studio@inkflow.ai</strong> / <strong>inkflow2024</strong>
-      </p>
     </AuthShell>
   );
 }
