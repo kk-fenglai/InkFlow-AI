@@ -2,6 +2,7 @@ package com.inkflow.ai.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,15 +14,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.outlined.Gesture
+import androidx.compose.material.icons.outlined.Toll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -31,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -60,6 +66,112 @@ fun BrandTopBar(title: String = "InkFlow AI") {
             Text(
                 title,
                 style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = DesignTokens.Ink,
+            )
+        }
+        HorizontalDivider(color = DesignTokens.SurfaceContainerHigh, thickness = 1.dp)
+    }
+}
+
+/**
+ * App bar for the signed-in tabs — mirrors the website header: wordmark on the
+ * left, credits pill and account avatar on the right.
+ */
+@Composable
+fun AppTopBar(
+    credits: Int?,
+    initial: String,
+    onAccountClick: () -> Unit,
+) {
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(DesignTokens.Background)
+                .padding(start = 20.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Outlined.Gesture,
+                contentDescription = null,
+                tint = DesignTokens.Ink,
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "InkFlow AI",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = DesignTokens.Ink,
+                modifier = Modifier.weight(1f),
+            )
+
+            if (credits != null) {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(DesignTokens.SurfaceContainerLow)
+                        .clickable(onClick = onAccountClick)
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Outlined.Toll,
+                        contentDescription = null,
+                        tint = DesignTokens.Secondary,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        "$credits cr",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = DesignTokens.OnSurface,
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(DesignTokens.Secondary.copy(alpha = 0.12f))
+                    .clickable(onClick = onAccountClick),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    initial.take(1).uppercase(),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = DesignTokens.Secondary,
+                )
+            }
+        }
+        HorizontalDivider(color = DesignTokens.SurfaceContainerHigh, thickness = 1.dp)
+    }
+}
+
+/** Back-arrow top bar for pushed detail routes. */
+@Composable
+fun DetailTopBar(title: String, onBack: () -> Unit) {
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(DesignTokens.Background)
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = DesignTokens.Ink,
+                )
+            }
+            Text(
+                title,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = DesignTokens.Ink,
             )

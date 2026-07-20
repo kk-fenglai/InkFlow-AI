@@ -1,12 +1,13 @@
 package com.inkflow.ai.ui
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoFixHigh
-import androidx.compose.material.icons.outlined.Create
+import androidx.compose.material.icons.outlined.Draw
 import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.HistoryEdu
 import androidx.compose.material.icons.outlined.Payments
-import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -18,9 +19,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.Column
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -42,13 +44,26 @@ private object Routes {
     const val Login = "login"
     const val Register = "register"
     const val Forgot = "forgot"
+
     const val Studio = "studio"
-    const val Refine = "refine"
     const val Library = "library"
-    const val Account = "account"
+    const val SignPdf = "sign"
+    const val Refine = "refine"
     const val Pricing = "pricing"
-    const val SignPdf = "signpdf"
+
+    const val Account = "account"
 }
+
+/** Primary destinations — mirrors the website's NAV_LINKS order. */
+private data class Tab(val route: String, val label: String, val icon: ImageVector)
+
+private val TABS = listOf(
+    Tab(Routes.Studio, "Studio", Icons.Outlined.Draw),
+    Tab(Routes.Library, "Library", Icons.Outlined.FolderOpen),
+    Tab(Routes.SignPdf, "Sign PDF", Icons.Outlined.HistoryEdu),
+    Tab(Routes.Refine, "Refine", Icons.Outlined.AutoFixHigh),
+    Tab(Routes.Pricing, "Pricing", Icons.Outlined.Payments),
+)
 
 @Composable
 fun RootNav(
@@ -84,47 +99,23 @@ fun RootNav(
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val current = backStack?.destination?.route ?: Routes.Studio
+    val onTab = TABS.any { it.route == current }
 
     Scaffold(
         containerColor = DesignTokens.Background,
+        topBar = {
+            if (onTab) {
+                val user = authStore.user
+                AppTopBar(
+                    credits = user?.credits,
+                    initial = (user?.name ?: user?.email ?: "?"),
+                    onAccountClick = { nav.navigate(Routes.Account) },
+                )
+            }
+        },
         bottomBar = {
-            if (current != Routes.SignPdf) {
-                Column {
-                    HorizontalDivider(color = DesignTokens.SurfaceContainerHigh, thickness = 1.dp)
-                    NavigationBar(containerColor = DesignTokens.SurfaceContainerLow) {
-                        listOf(
-                            Triple(Routes.Studio, "Studio", Icons.Outlined.Create),
-                            Triple(Routes.Refine, "Refine", Icons.Outlined.AutoFixHigh),
-                            Triple(Routes.Library, "Library", Icons.Outlined.FolderOpen),
-                            Triple(Routes.Account, "Account", Icons.Outlined.PersonOutline),
-                            Triple(Routes.Pricing, "Pricing", Icons.Outlined.Payments),
-                        ).forEach { (route, label, icon) ->
-                            NavigationBarItem(
-                                selected = current == route,
-                                onClick = {
-                                    nav.navigate(route) {
-                                        popUpTo(nav.graph.findStartDestination().id) {
-                                            saveState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                },
-                                icon = { Icon(icon, contentDescription = label) },
-                                label = {
-                                    Text(label, style = MaterialTheme.typography.labelSmall)
-                                },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = DesignTokens.Ink,
-                                    selectedTextColor = DesignTokens.Ink,
-                                    unselectedIconColor = DesignTokens.OnSurfaceVariant,
-                                    unselectedTextColor = DesignTokens.OnSurfaceVariant,
-                                    indicatorColor = DesignTokens.SurfaceContainerHigh,
-                                ),
-                            )
-                        }
-                    }
-                }
+            if (onTab) {
+                BottomTabs(nav = nav, current = current)
             }
         },
     ) { padding ->
@@ -134,22 +125,25 @@ fun RootNav(
             modifier = Modifier.padding(padding),
         ) {
             composable(Routes.Studio) {
-                StudioScreen(
-                    authStore = authStore,
-                    apiClient = apiClient,
-                    onSignPdf = { nav.navigate(Routes.SignPdf) },
-                )
+                StudioScreen(authStore = authStore, apiClient = apiClient)
+            }
+            composable(Routes.Library) {
+                LibraryScreen(apiClient = apiClient)
+            }
+            composable(Routes.SignPdf) {
+                SignPdfScreen(authStore = authStore, apiClient = apiClient)
             }
             composable(Routes.Refine) {
                 RefineScreen(apiClient = apiClient)
             }
-            composable(Routes.Library) {
-                LibraryScreen(apiClient = apiClient)
+            composable(Routes.Pricing) {
+                PricingScreen(authStore = authStore, apiClient = apiClient)
             }
             composable(Routes.Account) {
                 AccountScreen(
                     authStore = authStore,
                     apiClient = apiClient,
+                    onBack = { nav.popBackStack() },
                     onBuyCredits = {
                         nav.navigate(Routes.Pricing) {
                             popUpTo(nav.graph.findStartDestination().id) { saveState = true }
@@ -159,14 +153,40 @@ fun RootNav(
                     },
                 )
             }
-            composable(Routes.Pricing) {
-                PricingScreen(authStore = authStore, apiClient = apiClient)
-            }
-            composable(Routes.SignPdf) {
-                SignPdfScreen(
-                    authStore = authStore,
-                    apiClient = apiClient,
-                    onBack = { nav.popBackStack() },
+        }
+    }
+}
+
+@Composable
+private fun BottomTabs(nav: NavHostController, current: String) {
+    Column {
+        HorizontalDivider(color = DesignTokens.SurfaceContainerHigh, thickness = 1.dp)
+        NavigationBar(containerColor = DesignTokens.SurfaceContainerLow) {
+            TABS.forEach { tab ->
+                NavigationBarItem(
+                    selected = current == tab.route,
+                    onClick = {
+                        nav.navigate(tab.route) {
+                            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    icon = { Icon(tab.icon, contentDescription = tab.label) },
+                    label = {
+                        Text(
+                            tab.label,
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                        )
+                    },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = DesignTokens.Ink,
+                        selectedTextColor = DesignTokens.Ink,
+                        unselectedIconColor = DesignTokens.OnSurfaceVariant,
+                        unselectedTextColor = DesignTokens.OnSurfaceVariant,
+                        indicatorColor = DesignTokens.SurfaceContainerHigh,
+                    ),
                 )
             }
         }

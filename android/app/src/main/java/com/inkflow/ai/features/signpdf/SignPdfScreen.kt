@@ -101,7 +101,6 @@ private const val MAX_PDF_BYTES = 10 * 1024 * 1024
 fun SignPdfScreen(
     authStore: AuthStore,
     apiClient: ApiClient,
-    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -200,28 +199,6 @@ fun SignPdfScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = DesignTokens.Ink,
-                )
-            }
-            Text(
-                "Artisan Ink",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = DesignTokens.Ink,
-            )
-        }
-        HorizontalDivider(color = DesignTokens.SurfaceContainerHigh, thickness = 1.dp)
-
         Column(
             modifier = Modifier
                 .fillMaxSize()

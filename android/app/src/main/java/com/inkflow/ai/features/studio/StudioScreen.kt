@@ -71,7 +71,6 @@ import java.io.FileOutputStream
 fun StudioScreen(
     authStore: AuthStore,
     apiClient: ApiClient,
-    onSignPdf: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -295,49 +294,6 @@ fun StudioScreen(
         error?.let {
             Spacer(Modifier.height(10.dp))
             ErrorText(it)
-        }
-
-        Spacer(Modifier.height(24.dp))
-        InkCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onSignPdf() },
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier.size(46.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Surface(
-                        color = DesignTokens.Secondary.copy(alpha = 0.10f),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxSize(),
-                    ) {}
-                    Icon(
-                        Icons.Outlined.HistoryEdu,
-                        contentDescription = null,
-                        tint = DesignTokens.Secondary,
-                    )
-                }
-                Spacer(Modifier.width(14.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        "Secure Document Signing",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = DesignTokens.Ink,
-                    )
-                    Text(
-                        "Upload a PDF and apply your signature.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = DesignTokens.OnSurfaceVariant,
-                    )
-                }
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = null,
-                    tint = DesignTokens.Ink,
-                )
-            }
         }
 
         Spacer(Modifier.height(32.dp))

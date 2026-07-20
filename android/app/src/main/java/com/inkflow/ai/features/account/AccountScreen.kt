@@ -36,6 +36,7 @@ import com.inkflow.ai.core.ApiClient
 import com.inkflow.ai.core.AppConfig
 import com.inkflow.ai.core.AuthStore
 import com.inkflow.ai.core.DesignTokens
+import com.inkflow.ai.ui.DetailTopBar
 import com.inkflow.ai.ui.ErrorText
 import com.inkflow.ai.ui.InkCard
 import com.inkflow.ai.ui.InkChip
@@ -47,6 +48,7 @@ import kotlinx.coroutines.launch
 fun AccountScreen(
     authStore: AuthStore,
     apiClient: ApiClient,
+    onBack: () -> Unit,
     onBuyCredits: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -55,18 +57,16 @@ fun AccountScreen(
     var deleting by remember { mutableStateOf(false) }
     var deleteError by remember { mutableStateOf<String?>(null) }
 
+    Column(modifier = Modifier.fillMaxSize()) {
+        DetailTopBar(title = "Account", onBack = onBack)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(20.dp),
     ) {
-        Text(
-            "Account",
-            style = MaterialTheme.typography.displaySmall,
-            color = DesignTokens.Ink,
-        )
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(4.dp))
 
         authStore.user?.let { user ->
             InkCard(modifier = Modifier.fillMaxWidth()) {
@@ -168,6 +168,7 @@ fun AccountScreen(
             ErrorText(it)
         }
         Spacer(Modifier.height(24.dp))
+    }
     }
 
     if (showDelete) {
