@@ -20,22 +20,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.outlined.HistoryEdu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -52,6 +47,7 @@ import com.inkflow.ai.core.DesignTokens
 import com.inkflow.ai.core.SignatureBases
 import com.inkflow.ai.core.SignaturePreview
 import com.inkflow.ai.core.StrokeDataDto
+import com.inkflow.ai.core.Tier
 import com.inkflow.ai.core.renderStrokeBitmap
 import com.inkflow.ai.ui.ErrorText
 import com.inkflow.ai.ui.FieldLabel
@@ -79,7 +75,10 @@ fun StudioScreen(
     var fluidity by remember { mutableFloatStateOf(85f) }
     var rhythm by remember { mutableFloatStateOf(60f) }
     var pressure by remember { mutableFloatStateOf(55f) }
-    var expanded by remember { mutableStateOf(false) }
+    var tierFilter by remember { mutableStateOf<Tier?>(null) }
+    var unlocked by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var unlockCost by remember { mutableIntStateOf(1) }
+    var unlocking by remember { mutableStateOf(false) }
     var generating by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
     var strokeData by remember { mutableStateOf<StrokeDataDto?>(null) }
@@ -93,6 +92,16 @@ fun StudioScreen(
         fluidity = base.fluidity.toFloat()
         rhythm = base.rhythm.toFloat()
         pressure = base.pressure.toFloat()
+    }
+
+    val currentLocked = SignatureBases.find(baseId).tier == Tier.PREMIUM &&
+        baseId !in unlocked
+
+    LaunchedEffect(Unit) {
+        runCatching { apiClient.fetchUnlockedTemplates() }.getOrNull()?.let { res ->
+            unlocked = res.unlocked.orEmpty().toSet()
+            res.unlockCost?.let { unlockCost = it }
+        }
     }
 
     Column(
@@ -132,41 +141,69 @@ fun StudioScreen(
             modifier = Modifier.fillMaxWidth(),
         )
 
-        Spacer(Modifier.height(16.dp))
-        FieldLabel("Template")
-        Spacer(Modifier.height(8.dp))
-        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-            OutlinedTextField(
-                value = SignatureBases.find(baseId).name,
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                textStyle = MaterialTheme.typography.bodyLarge,
-                shape = RoundedCornerShape(6.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = DesignTokens.SurfaceCard,
-                    unfocusedContainerColor = DesignTokens.SurfaceCard,
-                    focusedBorderColor = DesignTokens.Ink,
-                    unfocusedBorderColor = DesignTokens.OutlineVariant,
-                ),
-                modifier = Modifier
-                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                    .fillMaxWidth(),
-            )
-            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                SignatureBases.free.forEach { base ->
-                    DropdownMenuItem(
-                        text = { Text(base.name, style = MaterialTheme.typography.bodyLarge) },
+        Spacer(Modifier.height(22.dp))
+        TemplateGallery(
+            selectedId = baseId,
+            previewText = text,
+            filter = tierFilter,
+            unlocked = unlocked,
+            unlockCost = unlockCost,
+            onFilterChange = { tierFilter = it },
+            onSelect = { applyBase(it.id) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        if (currentLocked) {
+            Spacer(Modifier.height(12.dp))
+            InkCard(modifier = Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "“${SignatureBases.find(baseId).name}” is premium",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = DesignTokens.Ink,
+                        )
+                        Text(
+                            "Unlock once for $unlockCost credit — yours permanently.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = DesignTokens.OnSurfaceVariant,
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    InkPrimaryButton(
+                        text = "Unlock",
+                        loading = unlocking,
                         onClick = {
-                            applyBase(base.id)
-                            expanded = false
+                            scope.launch {
+                                unlocking = true
+                                error = null
+                                message = null
+                                try {
+                                    val res = apiClient.unlockTemplate(baseId)
+                                    if (res.ok == true) {
+                                        unlocked = unlocked + baseId
+                                        message = if (res.alreadyOwned == true) {
+                                            "Already unlocked."
+                                        } else {
+                                            "Unlocked “${res.name ?: baseId}”."
+                                        }
+                                        authStore.refreshUser()
+                                    } else {
+                                        error = res.error ?: "Unlock failed"
+                                    }
+                                } catch (e: Exception) {
+                                    error = e.message
+                                } finally {
+                                    unlocking = false
+                                }
+                            }
                         },
                     )
                 }
             }
         }
 
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(22.dp))
         SliderRow("FLUIDITY", fluidity) { fluidity = it }
         SliderRow("RHYTHM", rhythm) { rhythm = it }
         SliderRow("PRESSURE", pressure) { pressure = it }
@@ -248,7 +285,7 @@ fun StudioScreen(
         InkPrimaryButton(
             text = "Render Final Ink (1 Credit)",
             loading = generating,
-            enabled = text.isNotBlank(),
+            enabled = text.isNotBlank() && !currentLocked,
             onClick = {
                 scope.launch {
                     generating = true
