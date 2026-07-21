@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -29,6 +28,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,12 +45,18 @@ import com.inkflow.ai.core.SignatureBase
 import com.inkflow.ai.core.SignatureBases
 import com.inkflow.ai.core.Tier
 import com.inkflow.ai.core.rememberSignatureFont
+import com.inkflow.ai.ui.InkOutlinedButton
 
-/** Preview label — the typed name, or a placeholder before the user types. */
+private const val COLLAPSED_COUNT = 6
+
+/**
+ * Preview label — the first word of the typed name. Whole words keep the grid
+ * tidy; a mid-word cut like "Eleanor Va" reads as a rendering glitch.
+ */
 private fun previewWord(text: String): String {
-    val t = text.trim()
-    if (t.isEmpty()) return "Signature"
-    return if (t.length > 10) t.take(10) else t
+    val first = text.trim().split(Regex("\\s+")).firstOrNull().orEmpty()
+    if (first.isEmpty()) return "Signature"
+    return if (first.length > 12) first.take(12) else first
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -62,7 +71,24 @@ fun TemplateGallery(
     onSelect: (SignatureBase) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var expanded by remember { mutableStateOf(false) }
     val bases = SignatureBases.byTier(filter)
+
+    // Collapsed shows a short, tidy row set — but never hides the active
+    // template, so the selection stays visible after collapsing.
+    val visible = remember(bases, expanded, selectedId) {
+        if (expanded || bases.size <= COLLAPSED_COUNT) {
+            bases
+        } else {
+            val head = bases.take(COLLAPSED_COUNT)
+            if (head.any { it.id == selectedId }) {
+                head
+            } else {
+                val selected = bases.firstOrNull { it.id == selectedId }
+                if (selected == null) head else listOf(selected) + head.dropLast(1)
+            }
+        }
+    }
 
     Column(modifier = modifier) {
         Text(
@@ -101,7 +127,7 @@ fun TemplateGallery(
             verticalArrangement = Arrangement.spacedBy(14.dp),
             maxItemsInEachRow = 2,
         ) {
-            bases.forEach { base ->
+            visible.forEach { base ->
                 TemplateCard(
                     base = base,
                     previewText = previewWord(previewText),
@@ -112,6 +138,21 @@ fun TemplateGallery(
                     modifier = Modifier.weight(1f),
                 )
             }
+            // Keep the last row balanced when the count is odd.
+            if (visible.size % 2 == 1) Spacer(Modifier.weight(1f))
+        }
+
+        if (bases.size > COLLAPSED_COUNT) {
+            Spacer(Modifier.height(14.dp))
+            InkOutlinedButton(
+                text = if (expanded) {
+                    "Show fewer"
+                } else {
+                    "View all ${bases.size} templates"
+                },
+                onClick = { expanded = !expanded },
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
@@ -156,9 +197,11 @@ private fun TemplateCard(
                 if (selected) 2.dp else 1.dp,
                 if (selected) DesignTokens.Ink else DesignTokens.SurfaceContainerHigh,
             ),
+            // Fixed height, not aspectRatio: inside FlowRow's weight the
+            // aspect-ratio modifier mis-measures and clips the labels below.
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(3f / 2f),
+                .height(118.dp),
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
@@ -173,29 +216,24 @@ private fun TemplateCard(
                     modifier = Modifier.padding(horizontal = 10.dp),
                 )
 
-                // Tier badge, top-left.
-                Surface(
-                    color = if (base.tier == Tier.FREE) {
-                        DesignTokens.Background.copy(alpha = 0.9f)
-                    } else {
-                        DesignTokens.Secondary.copy(alpha = 0.9f)
-                    },
-                    shape = RoundedCornerShape(4.dp),
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(6.dp),
-                ) {
-                    Text(
-                        if (base.tier == Tier.FREE) "FREE" else "$unlockCost CR",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontSize = 9.sp,
-                        color = if (base.tier == Tier.FREE) {
-                            DesignTokens.OnSurfaceVariant
-                        } else {
-                            DesignTokens.SurfaceCard
-                        },
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
-                    )
+                // Only premium carries a badge — a "FREE" chip on every free
+                // card is noise the section header already covers.
+                if (base.tier == Tier.PREMIUM) {
+                    Surface(
+                        color = DesignTokens.Secondary.copy(alpha = 0.9f),
+                        shape = RoundedCornerShape(4.dp),
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(6.dp),
+                    ) {
+                        Text(
+                            "$unlockCost CR",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 9.sp,
+                            color = DesignTokens.SurfaceCard,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                        )
+                    }
                 }
 
                 if (locked) {
