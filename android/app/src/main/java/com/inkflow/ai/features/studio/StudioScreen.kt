@@ -134,6 +134,13 @@ fun StudioScreen(
         }
 
         Spacer(Modifier.height(20.dp))
+        SignatureHero(
+            text = text,
+            base = SignatureBases.find(baseId),
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Spacer(Modifier.height(20.dp))
         FieldLabel("Signature Text")
         Spacer(Modifier.height(8.dp))
         InkTextField(
