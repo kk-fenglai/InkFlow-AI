@@ -81,6 +81,7 @@ import com.inkflow.ai.core.ApiClient
 import com.inkflow.ai.core.AuthStore
 import com.inkflow.ai.core.DesignTokens
 import com.inkflow.ai.core.SavedSignatureDto
+import com.inkflow.ai.core.SignPdfState
 import com.inkflow.ai.core.SignaturePreview
 import com.inkflow.ai.core.renderStrokeBitmap
 import com.inkflow.ai.ui.ErrorText
@@ -99,35 +100,39 @@ private const val MAX_PDF_BYTES = 10 * 1024 * 1024
 
 @Composable
 fun SignPdfScreen(
+    state: SignPdfState,
     authStore: AuthStore,
     apiClient: ApiClient,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var pdfBytes by remember { mutableStateOf<ByteArray?>(null) }
-    var pdfName by remember { mutableStateOf("document.pdf") }
-    var pageCount by remember { mutableIntStateOf(0) }
-    var pageIndex by remember { mutableIntStateOf(0) }
-    var pageBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var pagePtsW by remember { mutableFloatStateOf(612f) }
-    var pagePtsH by remember { mutableFloatStateOf(792f) }
+    // Hoisted: re-picking a multi-megabyte PDF after a tab switch is the worst
+    // thing this screen could ask of the user.
+    var pdfBytes by state::pdfBytes
+    var pdfName by state::pdfName
+    var pageCount by state::pageCount
+    var pageIndex by state::pageIndex
+    var pageBitmap by state::pageBitmap
+    var pagePtsW by state::pagePtsW
+    var pagePtsH by state::pagePtsH
 
-    var signatures by remember { mutableStateOf<List<SavedSignatureDto>>(emptyList()) }
-    var selectedSig by remember { mutableStateOf<SavedSignatureDto?>(null) }
-    var sigBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var signatures by state::signatures
+    var selectedSig by state::selectedSig
+    var sigBitmap by state::sigBitmap
 
-    var fracX by remember { mutableFloatStateOf(0.55f) }
-    var fracY by remember { mutableFloatStateOf(0.78f) }
-    var widthFrac by remember { mutableFloatStateOf(0.35f) }
-    var sesAccepted by remember { mutableStateOf(false) }
+    var fracX by state::fracX
+    var fracY by state::fracY
+    var widthFrac by state::widthFrac
+    var sesAccepted by state::sesAccepted
+
+    var signedBytes by state::signedBytes
+    var signedName by state::signedName
+    var creditsRemaining by state::creditsRemaining
+    var savedNote by state::savedNote
+    var error by state::error
 
     var signing by remember { mutableStateOf(false) }
-    var signedBytes by remember { mutableStateOf<ByteArray?>(null) }
-    var signedName by remember { mutableStateOf("signed.pdf") }
-    var creditsRemaining by remember { mutableStateOf<Int?>(null) }
-    var savedNote by remember { mutableStateOf<String?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
 
     val pdfPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),

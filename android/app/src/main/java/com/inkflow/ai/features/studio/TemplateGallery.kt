@@ -67,11 +67,12 @@ fun TemplateGallery(
     filter: Tier?,
     unlocked: Set<String>,
     unlockCost: Int,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
     onFilterChange: (Tier?) -> Unit,
     onSelect: (SignatureBase) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var expanded by remember { mutableStateOf(false) }
     val bases = SignatureBases.byTier(filter)
 
     // Collapsed shows a short, tidy row set — but never hides the active
@@ -150,7 +151,7 @@ fun TemplateGallery(
                 } else {
                     "View all ${bases.size} templates"
                 },
-                onClick = { expanded = !expanded },
+                onClick = { onExpandedChange(!expanded) },
                 modifier = Modifier.fillMaxWidth(),
             )
         }

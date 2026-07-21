@@ -46,7 +46,7 @@ import com.inkflow.ai.core.AuthStore
 import com.inkflow.ai.core.DesignTokens
 import com.inkflow.ai.core.SignatureBases
 import com.inkflow.ai.core.SignaturePreview
-import com.inkflow.ai.core.StrokeDataDto
+import com.inkflow.ai.core.StudioState
 import com.inkflow.ai.core.Tier
 import com.inkflow.ai.core.renderStrokeBitmap
 import com.inkflow.ai.ui.ErrorText
@@ -65,42 +65,44 @@ import java.io.FileOutputStream
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudioScreen(
+    state: StudioState,
     authStore: AuthStore,
     apiClient: ApiClient,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var text by remember { mutableStateOf("") }
-    var baseId by remember { mutableStateOf("poet") }
-    var fluidity by remember { mutableFloatStateOf(85f) }
-    var rhythm by remember { mutableFloatStateOf(60f) }
-    var pressure by remember { mutableFloatStateOf(55f) }
-    var tierFilter by remember { mutableStateOf<Tier?>(null) }
-    var unlocked by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var unlockCost by remember { mutableIntStateOf(1) }
+
+    // Delegated to the hoisted holder so the work in progress survives a tab
+    // switch; reads still register with Compose through the underlying states.
+    var text by state::text
+    var baseId by state::baseId
+    var fluidity by state::fluidity
+    var rhythm by state::rhythm
+    var pressure by state::pressure
+    var tierFilter by state::tierFilter
+    var unlocked by state::unlocked
+    val unlockCost = state.unlockCost
+    var strokeData by state::strokeData
+    var message by state::message
+    var error by state::error
+    var shareBitmap by state::shareBitmap
+
+    // Purely transient — an in-flight request does not outlive the screen.
     var unlocking by remember { mutableStateOf(false) }
     var generating by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
-    var strokeData by remember { mutableStateOf<StrokeDataDto?>(null) }
-    var message by remember { mutableStateOf<String?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var shareBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
-    fun applyBase(id: String) {
-        val base = SignatureBases.find(id)
-        baseId = id
-        fluidity = base.fluidity.toFloat()
-        rhythm = base.rhythm.toFloat()
-        pressure = base.pressure.toFloat()
-    }
+    fun applyBase(id: String) = state.applyBase(id)
 
-    val currentLocked = SignatureBases.find(baseId).tier == Tier.PREMIUM &&
-        baseId !in unlocked
+    val currentLocked = state.currentLocked
 
     LaunchedEffect(Unit) {
-        runCatching { apiClient.fetchUnlockedTemplates() }.getOrNull()?.let { res ->
-            unlocked = res.unlocked.orEmpty().toSet()
-            res.unlockCost?.let { unlockCost = it }
+        if (!state.unlocksLoaded) {
+            runCatching { apiClient.fetchUnlockedTemplates() }.getOrNull()?.let { res ->
+                unlocked = res.unlocked.orEmpty().toSet()
+                res.unlockCost?.let { state.unlockCost = it }
+                state.unlocksLoaded = true
+            }
         }
     }
 
@@ -148,6 +150,8 @@ fun StudioScreen(
             filter = tierFilter,
             unlocked = unlocked,
             unlockCost = unlockCost,
+            expanded = state.galleryExpanded,
+            onExpandedChange = { state.galleryExpanded = it },
             onFilterChange = { tierFilter = it },
             onSelect = { applyBase(it.id) },
             modifier = Modifier.fillMaxWidth(),

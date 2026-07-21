@@ -18,6 +18,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -30,6 +31,9 @@ import androidx.navigation.compose.rememberNavController
 import com.inkflow.ai.core.ApiClient
 import com.inkflow.ai.core.AuthStore
 import com.inkflow.ai.core.DesignTokens
+import com.inkflow.ai.core.RefineState
+import com.inkflow.ai.core.SignPdfState
+import com.inkflow.ai.core.StudioState
 import com.inkflow.ai.features.account.AccountScreen
 import com.inkflow.ai.features.auth.ForgotPasswordScreen
 import com.inkflow.ai.features.auth.LoginScreen
@@ -101,6 +105,12 @@ fun RootNav(
     val current = backStack?.destination?.route ?: Routes.Studio
     val onTab = TABS.any { it.route == current }
 
+    // Remembered here, not inside the screens: a tab's destination is disposed
+    // when you switch away, so screen-local state would be wiped every time.
+    val studioState = remember { StudioState() }
+    val refineState = remember { RefineState() }
+    val signPdfState = remember { SignPdfState() }
+
     Scaffold(
         containerColor = DesignTokens.Background,
         topBar = {
@@ -125,16 +135,24 @@ fun RootNav(
             modifier = Modifier.padding(padding),
         ) {
             composable(Routes.Studio) {
-                StudioScreen(authStore = authStore, apiClient = apiClient)
+                StudioScreen(
+                    state = studioState,
+                    authStore = authStore,
+                    apiClient = apiClient,
+                )
             }
             composable(Routes.Library) {
                 LibraryScreen(apiClient = apiClient)
             }
             composable(Routes.SignPdf) {
-                SignPdfScreen(authStore = authStore, apiClient = apiClient)
+                SignPdfScreen(
+                    state = signPdfState,
+                    authStore = authStore,
+                    apiClient = apiClient,
+                )
             }
             composable(Routes.Refine) {
-                RefineScreen(apiClient = apiClient)
+                RefineScreen(state = refineState, apiClient = apiClient)
             }
             composable(Routes.Pricing) {
                 PricingScreen(authStore = authStore, apiClient = apiClient)

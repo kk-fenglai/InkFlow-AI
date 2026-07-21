@@ -55,7 +55,7 @@ import androidx.compose.ui.unit.dp
 import com.inkflow.ai.core.ApiClient
 import com.inkflow.ai.core.DesignTokens
 import com.inkflow.ai.core.ImageStatsDto
-import com.inkflow.ai.core.RefineAnalysisDto
+import com.inkflow.ai.core.RefineState
 import com.inkflow.ai.ui.ErrorText
 import com.inkflow.ai.ui.InkCard
 import com.inkflow.ai.ui.InkChip
@@ -68,13 +68,14 @@ import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 @Composable
-fun RefineScreen(apiClient: ApiClient) {
+fun RefineScreen(state: RefineState, apiClient: ApiClient) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
+    // Hoisted so a picked image and its analysis survive a tab switch.
+    var bitmap by state::bitmap
+    var analysis by state::analysis
+    var error by state::error
     var analyzing by remember { mutableStateOf(false) }
-    var analysis by remember { mutableStateOf<RefineAnalysisDto?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia(),
