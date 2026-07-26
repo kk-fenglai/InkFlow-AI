@@ -15,7 +15,8 @@ export const FREE_STARTER_CREDITS = 5;
 
 /** Human-readable rows for Pricing + Account. */
 export const CREDIT_USAGE_ITEMS = [
-  { action: "Render Final Ink (HD PNG)", cost: CREDIT_COST.GENERATE_FINAL, free: false },
+  { action: "Render Final Ink (HD preview)", cost: 0, free: true },
+  { action: "Save Final Ink to device (local)", cost: CREDIT_COST.GENERATE_FINAL, free: false },
   { action: "Refinement Workbench (PNG export)", cost: 0, free: true },
   { action: "SVG vector export", cost: CREDIT_COST.SVG_EXPORT, free: false },
   {
@@ -24,12 +25,12 @@ export const CREDIT_USAGE_ITEMS = [
     free: false,
   },
   {
-    action: "Save to cloud (free templates)",
-    cost: 0,
-    free: true,
+    action: "Save to cloud library (any template)",
+    cost: CREDIT_COST.SAVE_SIGNATURE,
+    free: false,
   },
   {
-    action: "Save to cloud (premium templates)",
+    action: "Save captured handwritten photo to cloud",
     cost: CREDIT_COST.SAVE_SIGNATURE,
     free: false,
   },
@@ -123,9 +124,9 @@ export const PRICING_TIERS = [
     description: "Purchase credits when you need final ink, cloud saves, or PDF signing.",
     features: [
       "Everything in Guest",
-      "Render Final Ink (1 cr)",
-      "Free template cloud save (0 cr)",
-      "Premium cloud save (1 cr) · unlock (1 cr)",
+      "Render Final Ink (free HD preview)",
+      "Save Final Ink to device (1 cr)",
+      "Save to cloud library (1 cr) · unlock (1 cr)",
       "Sign PDF — SES (1 cr)",
       `AI tune (${AI_TUNE_USES_PER_CREDIT} uses = 1 cr) & SVG (1 cr)`,
     ],

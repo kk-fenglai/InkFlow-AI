@@ -45,10 +45,10 @@ import com.inkflow.ai.core.ApiClient
 import com.inkflow.ai.core.AuthStore
 import com.inkflow.ai.core.DesignTokens
 import com.inkflow.ai.core.SignatureBases
-import com.inkflow.ai.core.SignaturePreview
+import com.inkflow.ai.core.SignatureFontArt
 import com.inkflow.ai.core.StudioState
 import com.inkflow.ai.core.Tier
-import com.inkflow.ai.core.renderStrokeBitmap
+import com.inkflow.ai.core.renderSignatureFontBitmap
 import com.inkflow.ai.ui.ErrorText
 import com.inkflow.ai.ui.FieldLabel
 import com.inkflow.ai.ui.InkCard
@@ -230,7 +230,14 @@ fun StudioScreen(
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp),
             ) {
-                SignaturePreview(strokeData = data)
+                val gen = SignatureBases.find(data.baseId)
+                SignatureFontArt(
+                    text = data.text,
+                    fontFamily = gen.fontFamily,
+                    slantDeg = data.settings.slant ?: gen.slant,
+                    sizeMul = data.settings.size ?: gen.size,
+                    inkColorHex = data.settings.inkColor,
+                )
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     InkOutlinedButton(
@@ -316,10 +323,19 @@ fun StudioScreen(
                             size = base.size,
                         )
                         if (res.ok == true && res.strokeData != null) {
-                            strokeData = res.strokeData
+                            val data = res.strokeData
+                            strokeData = data
                             message = "Signature ready."
+                            val assets = context.assets
                             shareBitmap = withContext(Dispatchers.Default) {
-                                renderStrokeBitmap(res.strokeData)
+                                renderSignatureFontBitmap(
+                                    assets = assets,
+                                    text = data.text,
+                                    fontFamily = base.fontFamily,
+                                    slantDeg = data.settings.slant ?: base.slant,
+                                    sizeMul = data.settings.size ?: base.size,
+                                    inkColorHex = data.settings.inkColor,
+                                )
                             }
                             authStore.refreshUser()
                         } else {

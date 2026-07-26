@@ -40,11 +40,9 @@ headlines, Inter labels, hairline borders — see `ui/Theme.kt`, `ui/Type.kt`,
 |--------|--------|
 | Login / Register / Forgot password | Connected to `/api/mobile/*` and `/api/auth/forgot-password` |
 | Studio | Templates, sliders, generate, save, share PNG |
-| Refine | Gallery/camera upload → `/api/refine` handwriting analysis |
 | Sign PDF | Pick PDF, drag signature placement, SES → `/api/sign/pdf` (1 credit), save/share |
 | Library | List & delete cloud signatures |
-| Account | Credits, delete account, sign out |
-| Pricing | Google Play Billing → `/api/google/verify-purchase` |
+| Account | Credits & Pro via Google Play Billing → `/api/google/verify-purchase`, delete account, sign out |
 
 ## API
 

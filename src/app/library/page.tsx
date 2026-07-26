@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import CloudDocumentsPanel from "@/components/CloudDocumentsPanel";
 import CloudSignaturePreview from "@/components/CloudSignaturePreview";
 import { useCredits } from "@/hooks/useCredits";
 import { CREDIT_COST } from "@/lib/constants";
@@ -14,8 +15,11 @@ import { formatSavedAt, type SavedSignature } from "@/lib/signature-library";
 
 const MAX_SIGNATURES = 50;
 
+type LibraryTab = "signatures" | "documents";
+
 export default function CloudLibraryPage() {
   const { authenticated } = useCredits();
+  const [tab, setTab] = useState<LibraryTab>("signatures");
   const [library, setLibrary] = useState<SavedSignature[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,6 +59,14 @@ export default function CloudLibraryPage() {
     void refreshLibrary();
   }, [refreshLibrary]);
 
+  // `/library?tab=documents` is where the sign flow sends people after they
+  // save a signed PDF. Read it off the URL directly — useSearchParams would
+  // force a Suspense boundary around this client page.
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("tab");
+    if (requested === "documents") setTab("documents");
+  }, []);
+
   useEffect(() => {
     setRenameValue(selected?.name ?? "");
   }, [selected?.id, selected?.name]);
@@ -92,16 +104,48 @@ export default function CloudLibraryPage() {
           Cloud Library
         </span>
         <h1 className="font-display-lg text-display-lg text-on-surface mb-md">
-          Your Signature Library
+          Your Cloud Library
         </h1>
         <p className="font-body-lg text-body-lg text-on-surface-variant">
-          View and manage signatures saved to the cloud. Use them for PDF
-          signing or stroke-by-stroke practice. Saving costs{" "}
-          {CREDIT_COST.SAVE_SIGNATURE} credit each; browsing is free.
+          Signatures you saved to the cloud ({CREDIT_COST.SAVE_SIGNATURE} credit
+          each) and the PDFs you signed with them (free to keep). Browsing is
+          always free.
         </p>
       </header>
 
-      {!authenticated && (
+      <div
+        role="tablist"
+        aria-label="Cloud library sections"
+        className="flex gap-xs mb-xl p-xs w-fit rounded-lg bg-surface-container-low border border-outline-variant/30"
+      >
+        {(
+          [
+            ["signatures", "Signatures"],
+            ["documents", "Documents"],
+          ] as Array<[LibraryTab, string]>
+        ).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            aria-selected={tab === value}
+            onClick={() => setTab(value)}
+            className={`px-lg py-sm rounded font-label-md text-label-md transition-colors ${
+              tab === value
+                ? "bg-tertiary text-on-tertiary"
+                : "text-on-surface-variant hover:text-tertiary"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "documents" && (
+        <CloudDocumentsPanel authenticated={authenticated} />
+      )}
+
+      {tab === "signatures" && !authenticated && (
         <div className="mb-xl p-xl bg-surface-container border border-outline-variant/30 rounded-xl text-center max-w-lg">
           <span className="material-symbols-outlined text-tertiary text-[40px] mb-md block">
             cloud
@@ -118,11 +162,11 @@ export default function CloudLibraryPage() {
         </div>
       )}
 
-      {authenticated && loading && (
+      {tab === "signatures" && authenticated && loading && (
         <p className="font-body-md text-on-surface-variant">Loading library…</p>
       )}
 
-      {authenticated && !loading && library.length === 0 && (
+      {tab === "signatures" && authenticated && !loading && library.length === 0 && (
         <div className="text-center p-xl bg-surface-container-low rounded-xl border border-outline-variant/30 max-w-lg">
           <span className="material-symbols-outlined text-on-surface-variant/50 text-[48px] mb-md block">
             inventory_2
@@ -143,7 +187,7 @@ export default function CloudLibraryPage() {
         </div>
       )}
 
-      {authenticated && !loading && library.length > 0 && (
+      {tab === "signatures" && authenticated && !loading && library.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-xl">
           <section className="lg:col-span-8">
             <div className="flex items-center justify-between mb-md">
@@ -182,8 +226,9 @@ export default function CloudLibraryPage() {
                       {formatSavedAt(sig.savedAt)}
                     </p>
                     <p className="font-label-sm text-label-sm text-on-surface-variant/70 mt-xs truncate">
-                      {sig.strokeData.settings.text || "—"} ·{" "}
-                      {sig.strokeData.settings.baseId}
+                      {sig.strokeData.kind === "captured"
+                        ? "Captured photo"
+                        : `${sig.strokeData.settings.text || "—"} · ${sig.strokeData.settings.baseId}`}
                     </p>
                   </button>
                 );
@@ -206,15 +251,21 @@ export default function CloudLibraryPage() {
                   </div>
                   <dl className="space-y-sm font-label-sm text-label-sm">
                     <div className="flex justify-between gap-sm">
-                      <dt className="text-on-surface-variant">Text</dt>
+                      <dt className="text-on-surface-variant">
+                        {selected.strokeData.kind === "captured"
+                          ? "Name"
+                          : "Text"}
+                      </dt>
                       <dd className="text-on-surface truncate">
                         {selected.strokeData.settings.text || "—"}
                       </dd>
                     </div>
                     <div className="flex justify-between gap-sm">
-                      <dt className="text-on-surface-variant">Template</dt>
+                      <dt className="text-on-surface-variant">Type</dt>
                       <dd className="text-on-surface">
-                        {selected.strokeData.settings.baseId}
+                        {selected.strokeData.kind === "captured"
+                          ? "Captured photo"
+                          : selected.strokeData.settings.baseId}
                       </dd>
                     </div>
                     <div className="flex justify-between gap-sm">
@@ -223,12 +274,14 @@ export default function CloudLibraryPage() {
                         {formatSavedAt(selected.savedAt)}
                       </dd>
                     </div>
-                    <div className="flex justify-between gap-sm">
-                      <dt className="text-on-surface-variant">Strokes</dt>
-                      <dd className="text-on-surface">
-                        {selected.strokeData.strokes.length}
-                      </dd>
-                    </div>
+                    {selected.strokeData.kind !== "captured" && (
+                      <div className="flex justify-between gap-sm">
+                        <dt className="text-on-surface-variant">Strokes</dt>
+                        <dd className="text-on-surface">
+                          {selected.strokeData.strokes.length}
+                        </dd>
+                      </div>
+                    )}
                   </dl>
                 </div>
 

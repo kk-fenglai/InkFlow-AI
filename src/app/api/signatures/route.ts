@@ -13,7 +13,10 @@ import {
   type SignatureSettings,
 } from "@/lib/signature";
 import { backgroundFieldsFromPartial } from "@/lib/signature";
-import type { SignatureStrokeData } from "@/lib/stroke-data";
+import {
+  buildCapturedStrokeData,
+  type SignatureStrokeData,
+} from "@/lib/stroke-data";
 import { premiumAccessResponse } from "@/lib/template-access";
 
 export async function GET() {
@@ -44,12 +47,20 @@ export async function POST(req: Request) {
     settings?: Partial<SignatureSettings>;
     canvasWidth?: number;
     canvasHeight?: number;
+    kind?: "vector" | "captured";
+    capturedImage?: string;
   };
 
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  // Captured (photographed) handwritten signatures follow a separate path:
+  // the extracted transparent PNG is stored in place of vector strokes.
+  if (body.kind === "captured" || body.capturedImage) {
+    return saveCapturedSignature(user.id, body);
   }
 
   let strokeData = body.strokeData ?? null;
@@ -91,32 +102,30 @@ export async function POST(req: Request) {
   const baseId = strokeData.settings.baseId as ArtistBaseId;
   const premium = isPremiumBase(baseId);
 
+  // Premium templates must be unlocked before they can be saved.
   if (premium) {
     const locked = await premiumAccessResponse(user.id, baseId);
     if (locked) return locked;
   }
 
-  let creditsRemaining = user.credits;
+  // Every cloud-library save costs 1 credit, regardless of template tier.
+  const deducted = await deductCredits(
+    user.id,
+    CREDIT_COST.SAVE_SIGNATURE,
+    "save_signature_cloud",
+  );
 
-  if (premium) {
-    const deducted = await deductCredits(
-      user.id,
-      CREDIT_COST.SAVE_SIGNATURE,
-      "save_signature_cloud_premium",
+  if (!deducted.ok) {
+    return NextResponse.json(
+      {
+        error: "Saving to the cloud library costs 1 credit.",
+        code: "INSUFFICIENT_CREDITS",
+        credits: deducted.remaining,
+      },
+      { status: 402 },
     );
-
-    if (!deducted.ok) {
-      return NextResponse.json(
-        {
-          error: "Premium templates cost 1 credit to save to cloud library.",
-          code: "INSUFFICIENT_CREDITS",
-          credits: deducted.remaining,
-        },
-        { status: 402 },
-      );
-    }
-    creditsRemaining = deducted.remaining;
   }
+  const creditsRemaining = deducted.remaining;
 
   try {
     const signature = await createUserSignature(user.id, name, strokeData);
@@ -124,16 +133,75 @@ export async function POST(req: Request) {
       ok: true,
       signature,
       creditsRemaining,
-      charged: premium,
+      charged: true,
     });
   } catch (e) {
-    if (premium) {
-      await addCredits(
-        user.id,
-        CREDIT_COST.SAVE_SIGNATURE,
-        "save_signature_refund",
-      );
-    }
+    await addCredits(user.id, CREDIT_COST.SAVE_SIGNATURE, "save_signature_refund");
+    const message = e instanceof Error ? e.message : "Save failed.";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
+
+/** Max captured-image payload (~2.5 MB binary) to keep DB rows bounded. */
+const MAX_CAPTURED_DATA_URL = 3_500_000;
+
+async function saveCapturedSignature(
+  userId: string,
+  body: {
+    name?: string;
+    capturedImage?: string;
+    canvasWidth?: number;
+    canvasHeight?: number;
+  },
+) {
+  const image = body.capturedImage ?? "";
+  if (!/^data:image\/(png|webp);base64,/.test(image)) {
+    return NextResponse.json(
+      { error: "Captured signature must be a transparent PNG." },
+      { status: 400 },
+    );
+  }
+  if (image.length > MAX_CAPTURED_DATA_URL) {
+    return NextResponse.json(
+      { error: "Captured image is too large. Try a smaller photo." },
+      { status: 413 },
+    );
+  }
+
+  const name =
+    String(body.name ?? "Handwritten signature").trim().slice(0, 60) ||
+    "Handwritten signature";
+  const width = clamp(body.canvasWidth ?? 600, 100, 2000);
+  const height = clamp(body.canvasHeight ?? 240, 60, 2000);
+
+  const strokeData = buildCapturedStrokeData(image, name, width, height);
+
+  const deducted = await deductCredits(
+    userId,
+    CREDIT_COST.SAVE_SIGNATURE,
+    "save_signature_captured",
+  );
+  if (!deducted.ok) {
+    return NextResponse.json(
+      {
+        error: "Saving a captured signature costs 1 credit.",
+        code: "INSUFFICIENT_CREDITS",
+        credits: deducted.remaining,
+      },
+      { status: 402 },
+    );
+  }
+
+  try {
+    const signature = await createUserSignature(userId, name, strokeData);
+    return NextResponse.json({
+      ok: true,
+      signature,
+      creditsRemaining: deducted.remaining,
+      charged: true,
+    });
+  } catch (e) {
+    await addCredits(userId, CREDIT_COST.SAVE_SIGNATURE, "save_signature_refund");
     const message = e instanceof Error ? e.message : "Save failed.";
     return NextResponse.json({ error: message }, { status: 400 });
   }

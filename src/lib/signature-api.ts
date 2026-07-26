@@ -54,6 +54,38 @@ export async function saveCloudSignature(input: {
   };
 }
 
+export async function saveCapturedSignature(input: {
+  name?: string;
+  capturedImage: string;
+  canvasWidth?: number;
+  canvasHeight?: number;
+}): Promise<{
+  ok: boolean;
+  signature?: SavedSignature;
+  creditsRemaining?: number;
+  error?: string;
+  code?: string;
+}> {
+  const res = await fetch("/api/signatures", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...input, kind: "captured" }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    return {
+      ok: false,
+      error: data.error,
+      code: data.code ?? (res.status === 401 ? "UNAUTHORIZED" : undefined),
+    };
+  }
+  return {
+    ok: true,
+    signature: data.signature,
+    creditsRemaining: data.creditsRemaining,
+  };
+}
+
 export async function renameCloudSignature(
   id: string,
   name: string,

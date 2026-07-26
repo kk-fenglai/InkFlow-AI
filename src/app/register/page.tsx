@@ -15,6 +15,7 @@ function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -94,15 +95,28 @@ function RegisterForm() {
           <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">
             Password
           </span>
-          <input
-            type="password"
-            autoComplete="new-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-surface-container-lowest border-b-2 border-outline-variant focus:border-tertiary outline-none px-md py-sm font-body-md"
-            minLength={8}
-            required
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-surface-container-lowest border-b-2 border-outline-variant focus:border-tertiary outline-none pl-md pr-10 py-sm font-body-md"
+              minLength={8}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-pressed={showPassword}
+              className="absolute right-sm top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-tertiary transition-colors"
+            >
+              <span className="material-symbols-outlined text-[20px]">
+                {showPassword ? "visibility_off" : "visibility"}
+              </span>
+            </button>
+          </div>
         </label>
         <p className="font-label-sm text-label-sm text-on-surface-variant -mt-sm">
           At least 8 characters with letters and numbers.
@@ -111,15 +125,28 @@ function RegisterForm() {
           <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">
             Confirm password
           </span>
-          <input
-            type="password"
-            autoComplete="new-password"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            className="w-full bg-surface-container-lowest border-b-2 border-outline-variant focus:border-tertiary outline-none px-md py-sm font-body-md"
-            minLength={8}
-            required
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              className="w-full bg-surface-container-lowest border-b-2 border-outline-variant focus:border-tertiary outline-none pl-md pr-10 py-sm font-body-md"
+              minLength={8}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-pressed={showPassword}
+              className="absolute right-sm top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-tertiary transition-colors"
+            >
+              <span className="material-symbols-outlined text-[20px]">
+                {showPassword ? "visibility_off" : "visibility"}
+              </span>
+            </button>
+          </div>
         </label>
         {error && (
           <p className="font-label-sm text-label-sm text-error">{error}</p>

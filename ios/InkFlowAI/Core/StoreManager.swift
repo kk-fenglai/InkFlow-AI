@@ -37,15 +37,7 @@ final class StoreManager {
             switch result {
             case .success(let verification):
                 let transaction = try checkVerified(verification)
-                let res = try await APIClient.shared.verifyAppleTransaction(
-                    transactionId: String(transaction.id),
-                    productId: transaction.productID
-                )
-                if res.ok {
-                    lastPurchaseMessage = "+\(res.creditsGranted ?? 0) credits"
-                } else {
-                    errorMessage = res.message ?? res.reason ?? "Purchase failed"
-                }
+                try await fulfill(transaction)
                 await transaction.finish()
             case .userCancelled:
                 break
@@ -60,8 +52,47 @@ final class StoreManager {
     }
 
     func restorePurchases() async {
-        try? await AppStore.sync()
-        lastPurchaseMessage = "Restored App Store purchases"
+        isLoading = true
+        errorMessage = nil
+        lastPurchaseMessage = nil
+        defer { isLoading = false }
+
+        do {
+            try await AppStore.sync()
+            var restored = 0
+            for await result in Transaction.currentEntitlements {
+                guard case .verified(let transaction) = result else { continue }
+                if transaction.revocationDate != nil { continue }
+                let ok = try await fulfill(transaction)
+                if ok { restored += 1 }
+            }
+            lastPurchaseMessage = restored > 0
+                ? "Restored \(restored) purchase(s)"
+                : "No active subscriptions to restore"
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    @discardableResult
+    private func fulfill(_ transaction: Transaction) async throws -> Bool {
+        let res = try await APIClient.shared.verifyAppleTransaction(
+            transactionId: String(transaction.id),
+            productId: transaction.productID
+        )
+        if res.ok {
+            if let granted = res.creditsGranted, granted > 0 {
+                lastPurchaseMessage = "+\(granted) credits"
+            } else {
+                lastPurchaseMessage = "Purchase applied"
+            }
+            return true
+        }
+        if res.reason == "already_completed" {
+            return false
+        }
+        errorMessage = res.message ?? res.reason ?? "Purchase failed"
+        return false
     }
 
     private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {

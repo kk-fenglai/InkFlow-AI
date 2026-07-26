@@ -31,12 +31,13 @@ open InkFlowAI.xcodeproj
 |-----|--------|
 | Login / Register | ✅ API connected |
 | Forgot password | ✅ Email reset link |
-| Studio | ✅ Generate, preview, save to library, share PNG |
+| Studio | ✅ Generate, 10 free templates, sliders, save, share PNG |
 | Cloud Library | ✅ List & delete saved signatures |
 | Refine | ✅ Photo upload + free ink analysis |
 | Sign PDF | ✅ Pick PDF, place signature, SES sign (1 credit), share |
-| Account | ✅ Credits, IAP, delete account, sign out |
-| Pricing | ✅ StoreKit 2 UI (needs App Store Connect products) |
+| Account | ✅ Credits, IAP, restore, delete account, sign out |
+| Pricing | ✅ StoreKit 2 + `InkFlowAI.storekit` local testing |
+| App Icon | ⚠️ Run `scripts/prepare-icons.sh` on Mac for 1024 PNG |
 
 ## API
 
@@ -54,9 +55,15 @@ Run `npm run dev` on your Mac and set `MOBILE_CORS_ORIGINS=*` in `.env`.
 
 ## StoreKit testing
 
-1. App Store Connect → create IAP products (IDs in `StoreManager.swift`)
-2. Xcode → **File → New → StoreKit Configuration File** for sandbox testing without Connect
+1. App Store Connect → create IAP products (IDs in `StoreManager.swift`) — see [docs/IOS_APP_STORE_CONNECT.md](../docs/IOS_APP_STORE_CONNECT.md)
+2. Debug builds use `InkFlowAI.storekit` (wired in `project.yml`)
 3. Server must have matching `APPLE_IAP_*` env vars on Vercel
+
+## App Store docs
+
+- [IOS_APP_STORE_PLAN.md](../docs/IOS_APP_STORE_PLAN.md) — overall roadmap
+- [IOS_APP_STORE_CONNECT.md](../docs/IOS_APP_STORE_CONNECT.md) — Connect step-by-step
+- [IOS_SUBMISSION_CHECKLIST.md](../docs/IOS_SUBMISSION_CHECKLIST.md) — pre-submission checklist
 
 ## Project structure
 

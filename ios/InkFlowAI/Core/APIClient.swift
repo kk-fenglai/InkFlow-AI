@@ -86,15 +86,25 @@ actor APIClient {
         return try await post("/api/apple/verify-transaction", body: body)
     }
 
-    func generateFinalInk(text: String, baseId: String = "poet") async throws -> GenerateResponse {
+    func generateFinalInk(
+        text: String,
+        baseId: String = "poet",
+        fluidity: Double = 50,
+        rhythm: Double = 50,
+        pressure: Double = 50,
+        slant: Double = 0,
+        size: Double = 1
+    ) async throws -> GenerateResponse {
         try await post(
             "/api/generate",
             body: [
                 "text": text,
                 "baseId": baseId,
-                "fluidity": 50,
-                "rhythm": 50,
-                "pressure": 50,
+                "fluidity": fluidity,
+                "rhythm": rhythm,
+                "pressure": pressure,
+                "slant": slant,
+                "size": size,
             ]
         )
     }

@@ -46,12 +46,6 @@ class StudioState {
         get() = SignatureBases.find(baseId).tier == Tier.PREMIUM && baseId !in unlocked
 }
 
-class RefineState {
-    var bitmap by mutableStateOf<Bitmap?>(null)
-    var analysis by mutableStateOf<RefineAnalysisDto?>(null)
-    var error by mutableStateOf<String?>(null)
-}
-
 class SignPdfState {
     var pdfBytes by mutableStateOf<ByteArray?>(null)
     var pdfName by mutableStateOf("document.pdf")
@@ -75,4 +69,29 @@ class SignPdfState {
     var creditsRemaining by mutableStateOf<Int?>(null)
     var savedNote by mutableStateOf<String?>(null)
     var error by mutableStateOf<String?>(null)
+
+    // Result step: the signed document is shown back to the user before they
+    // decide where it goes (device download, cloud library, or share).
+    var signedPreview by mutableStateOf<Bitmap?>(null)
+    var signedPageIndex by mutableIntStateOf(0)
+    var signedPageCount by mutableIntStateOf(1)
+    var uploadedDocId by mutableStateOf<String?>(null)
+
+    /** Clears the result step so the editor comes back for another document. */
+    fun startNewDocument() {
+        pdfBytes = null
+        pdfName = "document.pdf"
+        pageCount = 0
+        pageIndex = 0
+        pageBitmap = null
+        signedBytes = null
+        signedName = "signed.pdf"
+        signedPreview = null
+        signedPageIndex = 0
+        signedPageCount = 1
+        uploadedDocId = null
+        creditsRemaining = null
+        savedNote = null
+        error = null
+    }
 }

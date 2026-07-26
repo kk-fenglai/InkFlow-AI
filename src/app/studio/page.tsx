@@ -300,7 +300,7 @@ export default function StudioPage() {
       if (result.code === "UNAUTHORIZED" || !result.ok) {
         if (result.code === "INSUFFICIENT_CREDITS") {
           setStatusMsg(
-            `Premium templates cost ${CREDIT_COST.SAVE_SIGNATURE} credit to save. Buy credits on Pricing.`,
+            `Saving to the cloud library costs ${CREDIT_COST.SAVE_SIGNATURE} credit. Buy credits on Pricing.`,
           );
         } else {
           setStatusMsg(result.error ?? "Cloud save failed.");
@@ -311,11 +311,8 @@ export default function StudioPage() {
       if (result.signature) {
         setLastStrokeData(result.signature.strokeData);
       }
-      const charged = currentBase.tier === "premium";
       setStatusMsg(
-        charged
-          ? `Saved “${result.signature?.name}” (${CREDIT_COST.SAVE_SIGNATURE} cr). ${result.creditsRemaining} credit(s) left.`
-          : `Saved “${result.signature?.name}” to cloud library — free for free templates.`,
+        `Saved “${result.signature?.name}” to cloud library (${CREDIT_COST.SAVE_SIGNATURE} cr). ${result.creditsRemaining} credit(s) left.`,
       );
       refresh();
     } catch {
@@ -446,19 +443,62 @@ export default function StudioPage() {
         return;
       }
 
-      const enhanced = data.settings as SignatureSettings;
       setAiNote(data.aiNote ?? "");
 
       if (data.strokeData) {
         setLastStrokeData(data.strokeData as SignatureStrokeData);
       }
 
-      const exportCanvas = canvasRef.current?.getCanvas();
-      if (!exportCanvas) return;
-      downloadCanvasPng(exportCanvas, `${safeName(text)}.png`);
       setRendered(true);
       setStatusMsg(
-        `Final ink exported. ${data.creditsRemaining} credit(s) remaining. Save to Cloud Library when ready.`,
+        "Final ink ready — choose where to save it below (1 credit each).",
+      );
+    } catch {
+      setStatusMsg("Network error. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveToLocal() {
+    if (!requireUnlockedTemplate()) return;
+    if (!authenticated) {
+      setStatusMsg("Sign in to save your final ink.");
+      return;
+    }
+    setBusy(true);
+    setStatusMsg("");
+    try {
+      const res = await fetch("/api/export/local", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: text.trim(), baseId: settings.baseId }),
+      });
+      const data = await res.json();
+
+      if (res.status === 401) {
+        setStatusMsg("Sign in to save your final ink.");
+        return;
+      }
+      if (res.status === 402) {
+        setStatusMsg(
+          `Need 1 credit to save locally (${data.credits ?? 0} left). Buy credits on Pricing.`,
+        );
+        return;
+      }
+      if (!res.ok) {
+        setStatusMsg(data.error ?? "Save failed.");
+        return;
+      }
+
+      const exportCanvas = canvasRef.current?.getCanvas();
+      if (!exportCanvas) {
+        setStatusMsg("Canvas not ready — render again.");
+        return;
+      }
+      downloadCanvasPng(exportCanvas, `${safeName(text)}.png`);
+      setStatusMsg(
+        `Saved to your downloads (1 credit). ${data.creditsRemaining} credit(s) remaining.`,
       );
       refresh();
     } catch {
@@ -628,9 +668,9 @@ export default function StudioPage() {
               value={nlInstruction}
               onChange={(e) => setNlInstruction(e.target.value)}
               placeholder={`e.g.\n"Make it more fluid and connected"\n"更流畅、更有商务感"\n"Thicker strokes, extend the final flourish"`}
-              rows={5}
+              rows={3}
               maxLength={200}
-              className="w-full min-h-[140px] bg-surface-container-lowest border border-outline-variant rounded-lg px-md py-md font-body-lg text-body-lg text-on-surface resize-y focus:border-tertiary outline-none leading-relaxed"
+              className="w-full min-h-[70px] bg-surface-container-lowest border border-outline-variant rounded-lg px-md py-md font-body-lg text-body-lg text-on-surface resize-y focus:border-tertiary outline-none leading-relaxed"
             />
             <div className="flex flex-wrap items-center justify-between gap-sm">
               <span className="font-label-sm text-label-sm text-on-surface-variant">
@@ -959,23 +999,44 @@ export default function StudioPage() {
               {busy ? "Rendering…" : "Render Final Ink"}
             </button>
             <p className="font-label-sm text-label-sm text-center text-on-surface-variant">
-              Uses 1 generation credit
+              Free HD render
               {authenticated ? ` · You have ${credits}` : " · Sign in required"}
             </p>
-            <button
-              type="button"
-              onClick={saveToCloud}
-              disabled={busy}
-              className="w-full border border-tertiary text-tertiary py-sm rounded-DEFAULT font-label-md text-label-md hover:bg-tertiary/10 transition-colors disabled:opacity-50"
-            >
-              Save to Cloud Library
-            </button>
-            <p className="font-label-sm text-label-sm text-center text-on-surface-variant">
-              {currentBase.tier === "premium"
-                ? `${CREDIT_COST.SAVE_SIGNATURE} credit · premium template`
-                : "Free · free templates"}
-              {authenticated ? ` · You have ${credits}` : " · sign in required"}
-            </p>
+
+            {rendered && (
+              <div className="flex flex-col gap-sm p-sm rounded-DEFAULT bg-surface-container border border-tertiary/30">
+                <p className="font-label-sm text-label-sm text-center text-on-surface uppercase tracking-widest">
+                  Choose where to save · 1 credit each
+                </p>
+                <div className="grid grid-cols-2 gap-sm">
+                  <button
+                    type="button"
+                    onClick={saveToLocal}
+                    disabled={busy}
+                    className="border border-tertiary text-tertiary py-sm rounded-DEFAULT font-label-md text-label-md flex justify-center items-center gap-xs hover:bg-tertiary/10 transition-colors disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      download
+                    </span>
+                    Save to Local
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveToCloud}
+                    disabled={busy}
+                    className="border border-tertiary text-tertiary py-sm rounded-DEFAULT font-label-md text-label-md flex justify-center items-center gap-xs hover:bg-tertiary/10 transition-colors disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      cloud_upload
+                    </span>
+                    Save to Cloud
+                  </button>
+                </div>
+                <p className="font-label-sm text-label-sm text-center text-on-surface-variant">
+                  Local downloads a PNG · Cloud stores it in your Library
+                </p>
+              </div>
+            )}
             <button
               type="button"
               onClick={downloadSvg}
@@ -1001,8 +1062,8 @@ export default function StudioPage() {
             {!statusMsg && (
               <p className="font-label-sm text-label-sm text-center text-on-surface-variant mt-xs">
                 {rendered
-                  ? "Saved to your downloads."
-                  : "HD export via server AI"}
+                  ? "Pick Local or Cloud above · 1 credit each"
+                  : "Free HD render · pay only when you save"}
               </p>
             )}
           </div>

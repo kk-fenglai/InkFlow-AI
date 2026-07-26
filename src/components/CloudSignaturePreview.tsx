@@ -16,9 +16,15 @@ export default function CloudSignaturePreview({
   className = "",
   alt,
 }: Props) {
-  const [src, setSrc] = useState<string | null>(null);
+  const captured = signature.strokeData.capturedImage ?? null;
+  const [src, setSrc] = useState<string | null>(captured);
 
   useEffect(() => {
+    // Captured (photographed) signatures already hold a ready-to-show PNG.
+    if (captured) {
+      setSrc(captured);
+      return;
+    }
     let cancelled = false;
     void settingsToPngDataUrl(
       signature.strokeData.settings,
@@ -30,7 +36,7 @@ export default function CloudSignaturePreview({
     return () => {
       cancelled = true;
     };
-  }, [signature]);
+  }, [signature, captured]);
 
   if (!src) {
     return (

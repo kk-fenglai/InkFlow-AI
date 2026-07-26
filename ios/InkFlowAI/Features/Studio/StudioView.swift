@@ -3,6 +3,10 @@ import SwiftUI
 struct StudioView: View {
     @Environment(AuthStore.self) private var auth
     @State private var signatureText = ""
+    @State private var selectedBaseId = "poet"
+    @State private var fluidity = 50.0
+    @State private var rhythm = 50.0
+    @State private var pressure = 50.0
     @State private var isGenerating = false
     @State private var isSaving = false
     @State private var strokeData: StrokeDataDTO?
@@ -10,6 +14,10 @@ struct StudioView: View {
     @State private var errorMessage: String?
     @State private var shareImage: UIImage?
     @State private var showShare = false
+
+    private var selectedBase: SignatureBases.Base {
+        SignatureBases.free.first { $0.id == selectedBaseId } ?? SignatureBases.free[0]
+    }
 
     var body: some View {
         NavigationStack {
@@ -23,6 +31,24 @@ struct StudioView: View {
                         .padding()
                         .background(DesignTokens.surfaceContainerLow)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Template")
+                            .font(.subheadline.weight(.semibold))
+                        Picker("Template", selection: $selectedBaseId) {
+                            ForEach(SignatureBases.free) { base in
+                                Text(base.name).tag(base.id)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .onChange(of: selectedBaseId) { _, id in
+                            applyBaseDefaults(id)
+                        }
+                    }
+
+                    sliderRow("Fluidity", value: $fluidity)
+                    sliderRow("Rhythm", value: $rhythm)
+                    sliderRow("Pressure", value: $pressure)
 
                     if let credits = auth.user?.credits {
                         Text("\(credits) credits available")
@@ -82,7 +108,32 @@ struct StudioView: View {
                     ShareSheet(items: [shareImage])
                 }
             }
+            .onAppear {
+                applyBaseDefaults(selectedBaseId)
+            }
         }
+    }
+
+    private func sliderRow(_ title: String, value: Binding<Double>) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(title)
+                    .font(.caption)
+                    .foregroundStyle(DesignTokens.onSurfaceVariant)
+                Spacer()
+                Text("\(Int(value.wrappedValue))")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(DesignTokens.tertiary)
+            }
+            Slider(value: value, in: 1...100, step: 1)
+        }
+    }
+
+    private func applyBaseDefaults(_ id: String) {
+        guard let base = SignatureBases.free.first(where: { $0.id == id }) else { return }
+        fluidity = base.fluidity
+        rhythm = base.rhythm
+        pressure = base.pressure
     }
 
     private func generate() async {
@@ -94,7 +145,13 @@ struct StudioView: View {
         defer { isGenerating = false }
         do {
             let res = try await APIClient.shared.generateFinalInk(
-                text: signatureText.trimmingCharacters(in: .whitespaces)
+                text: signatureText.trimmingCharacters(in: .whitespaces),
+                baseId: selectedBaseId,
+                fluidity: fluidity,
+                rhythm: rhythm,
+                pressure: pressure,
+                slant: selectedBase.slant,
+                size: selectedBase.size
             )
             if res.ok == true, let data = res.strokeData {
                 strokeData = data

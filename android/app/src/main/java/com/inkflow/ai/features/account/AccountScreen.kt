@@ -48,8 +48,6 @@ import kotlinx.coroutines.launch
 fun AccountScreen(
     authStore: AuthStore,
     apiClient: ApiClient,
-    onBack: () -> Unit,
-    onBuyCredits: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -57,16 +55,18 @@ fun AccountScreen(
     var deleting by remember { mutableStateOf(false) }
     var deleteError by remember { mutableStateOf<String?>(null) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        DetailTopBar(title = "Account", onBack = onBack)
-
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(20.dp),
     ) {
-        Spacer(Modifier.height(4.dp))
+        Text(
+            "Account",
+            style = MaterialTheme.typography.displaySmall,
+            color = DesignTokens.Ink,
+        )
+        Spacer(Modifier.height(18.dp))
 
         authStore.user?.let { user ->
             InkCard(modifier = Modifier.fillMaxWidth()) {
@@ -105,14 +105,10 @@ fun AccountScreen(
             }
         }
 
-        Spacer(Modifier.height(20.dp))
-        InkPrimaryButton(
-            text = "Buy Credits & Pro",
-            onClick = onBuyCredits,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        Spacer(Modifier.height(28.dp))
+        BuyCreditsSection(authStore = authStore, apiClient = apiClient)
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(28.dp))
         InkOutlinedButton(
             text = "Sign Out",
             onClick = { scope.launch { authStore.logout() } },
@@ -168,7 +164,6 @@ fun AccountScreen(
             ErrorText(it)
         }
         Spacer(Modifier.height(24.dp))
-    }
     }
 
     if (showDelete) {

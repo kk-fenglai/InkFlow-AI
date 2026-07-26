@@ -139,36 +139,35 @@ data class UnlockTemplateResponse(
     val code: String? = null,
 )
 
-data class ImageStatsDto(
-    val width: Int,
-    val height: Int,
-    val meanLuminance: Double,
-    val stdLuminance: Double,
-    val darkPixelRatio: Double,
-    val paperLuminance: Double,
-    val inkLuminance: Double,
-)
-
-data class RefineAnalysisDto(
-    val threshold: Int? = null,
-    val smoothing: Int? = null,
-    val inkColor: String? = null,
-    val refineStrength: Int? = null,
-    val aiNote: String? = null,
-)
-
-data class RefineResponse(
-    val ok: Boolean? = null,
-    val analysis: RefineAnalysisDto? = null,
-    val exportAuthorized: Boolean? = null,
-    val error: String? = null,
-)
-
 data class SignPdfResponse(
     val ok: Boolean? = null,
     val pdfBase64: String? = null,
     val fileName: String? = null,
     val creditsRemaining: Int? = null,
+    val error: String? = null,
+    val code: String? = null,
+)
+
+data class CloudDocumentDto(
+    val id: String,
+    val fileName: String,
+    val pageCount: Int = 1,
+    val byteSize: Long = 0,
+    val savedAt: String,
+    /** Only present when a single document is fetched by id. */
+    val pdfBase64: String? = null,
+)
+
+data class DocumentsListResponse(
+    val ok: Boolean? = null,
+    val documents: List<CloudDocumentDto>? = null,
+    val error: String? = null,
+    val code: String? = null,
+)
+
+data class DocumentResponse(
+    val ok: Boolean? = null,
+    val document: CloudDocumentDto? = null,
     val error: String? = null,
     val code: String? = null,
 )

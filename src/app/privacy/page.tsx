@@ -7,7 +7,7 @@ export default function PrivacyPage() {
         Privacy Policy
       </h1>
       <p className="font-body-md text-body-md text-on-surface-variant mb-lg">
-        Last updated: {new Date().toISOString().slice(0, 10)}
+        Last updated: 2026-07-17
       </p>
 
       <section className="space-y-md font-body-md text-body-md text-on-surface-variant">
@@ -19,15 +19,27 @@ export default function PrivacyPage() {
           saved signature stroke data, template unlocks, and document signing
           audit records (file name and timestamp — not document contents).
         </p>
+        <p>
+          Our native iOS app collects the same account and usage data as the
+          website. Photo library access is used only when you choose an image
+          for signature refinement; we do not scan your library in the
+          background.
+        </p>
 
         <h2 className="font-headline-sm text-headline-sm text-on-surface">
           How we use data
         </h2>
         <p>
           Data is used to provide signature generation, cloud library storage,
-          credit billing via Stripe, and PDF signing (SES). Optional OpenAI
-          integration for natural-language tuning sends only your tuning prompt
-          when configured.
+          credit billing, and PDF signing (SES). On the website, payments are
+          processed by Stripe. In the iOS app, digital goods are sold only
+          through Apple In-App Purchase; we receive transaction identifiers to
+          grant credits and subscriptions.
+        </p>
+        <p>
+          Optional AI-assisted features may send tuning prompts or image
+          analysis data to configured providers (e.g. DeepSeek or OpenAI) when
+          enabled on the server.
         </p>
 
         <h2 className="font-headline-sm text-headline-sm text-on-surface">
@@ -38,15 +50,16 @@ export default function PrivacyPage() {
           <Link href="/account" className="text-tertiary underline">
             Account
           </Link>{" "}
-          page. PDF files uploaded for signing are processed in memory and are
-          not stored on our servers after the request completes.
+          page on the web, or from the Account tab in the iOS app (Delete
+          account). PDF files uploaded for signing are processed in memory and
+          are not stored on our servers after the request completes.
         </p>
 
         <h2 className="font-headline-sm text-headline-sm text-on-surface">
           Contact
         </h2>
         <p>
-          Questions: support@inkflow.ai (placeholder — update for production).
+          Questions: dengfenglai1210@gmail.com
         </p>
       </section>
 

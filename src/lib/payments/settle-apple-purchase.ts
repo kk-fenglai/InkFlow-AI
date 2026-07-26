@@ -78,6 +78,9 @@ export async function settleAppleSubscription(input: {
     return { ok: false, reason: "unknown_product" };
   }
 
+  const originalTransactionId =
+    input.originalTransactionId?.trim() || input.transactionId;
+
   const existing = await prisma.creditPurchase.findUnique({
     where: { appleTransactionId: input.transactionId },
   });
@@ -98,6 +101,7 @@ export async function settleAppleSubscription(input: {
         paymentProvider: "apple",
         stripeSessionId: sessionKey,
         appleTransactionId: input.transactionId,
+        appleOriginalTransactionId: originalTransactionId,
         packId: product.packId,
         purchaseType: "subscription",
         credits: product.credits,
@@ -105,6 +109,11 @@ export async function settleAppleSubscription(input: {
         currency: product.currency,
         status: "pending",
       },
+    });
+  } else if (!purchase.appleOriginalTransactionId) {
+    await prisma.creditPurchase.update({
+      where: { id: purchase.id },
+      data: { appleOriginalTransactionId: originalTransactionId },
     });
   }
 

@@ -26,6 +26,7 @@ class MainActivity : ComponentActivity() {
                     RootNav(
                         authStore = app.authStore,
                         apiClient = app.apiClient,
+                        networkMonitor = app.networkMonitor,
                     )
                 }
             }

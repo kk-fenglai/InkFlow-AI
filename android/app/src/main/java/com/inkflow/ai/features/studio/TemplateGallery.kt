@@ -18,6 +18,9 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -121,26 +124,52 @@ fun TemplateGallery(
         }
 
         Spacer(Modifier.height(12.dp))
-        // A non-lazy flow grid: the whole Studio page owns the scroll, so a
-        // nested scrollable never swallows the gesture.
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-            maxItemsInEachRow = 2,
-        ) {
-            visible.forEach { base ->
-                TemplateCard(
-                    base = base,
-                    previewText = previewWord(previewText),
-                    selected = base.id == selectedId,
-                    locked = base.tier == Tier.PREMIUM && base.id !in unlocked,
-                    unlockCost = unlockCost,
-                    onClick = { onSelect(base) },
-                    modifier = Modifier.weight(1f),
-                )
+        if (expanded) {
+            // Expanded, the full 50 would stretch the page into an endless
+            // scroll. Confine them to a fixed-height grid that scrolls on its
+            // own — bounded height keeps it safe inside the page's scroll.
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(440.dp),
+            ) {
+                gridItems(visible, key = { it.id }) { base ->
+                    TemplateCard(
+                        base = base,
+                        previewText = previewWord(previewText),
+                        selected = base.id == selectedId,
+                        locked = base.tier == Tier.PREMIUM && base.id !in unlocked,
+                        unlockCost = unlockCost,
+                        onClick = { onSelect(base) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
-            // Keep the last row balanced when the count is odd.
-            if (visible.size % 2 == 1) Spacer(Modifier.weight(1f))
+        } else {
+            // Collapsed set is short — a non-lazy flow grid lets the whole
+            // Studio page own the scroll, so no nested scrollable competes.
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                maxItemsInEachRow = 2,
+            ) {
+                visible.forEach { base ->
+                    TemplateCard(
+                        base = base,
+                        previewText = previewWord(previewText),
+                        selected = base.id == selectedId,
+                        locked = base.tier == Tier.PREMIUM && base.id !in unlocked,
+                        unlockCost = unlockCost,
+                        onClick = { onSelect(base) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                // Keep the last row balanced when the count is odd.
+                if (visible.size % 2 == 1) Spacer(Modifier.weight(1f))
+            }
         }
 
         if (bases.size > COLLAPSED_COUNT) {

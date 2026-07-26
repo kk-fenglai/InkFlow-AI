@@ -27,6 +27,7 @@ model User {
   signatures         SavedSignature[]
   templateUnlocks    TemplateUnlock[]
   signAudits         SignAudit[]
+  signedDocuments    SignedDocument[]
   payContracts       PayContract[]
   subscriptionRecords SubscriptionRecord[]
   passwordResetTokens PasswordResetToken[]
@@ -110,6 +111,9 @@ model CreditPurchase {
   stripeSessionId       String        @unique
   stripePaymentIntentId String?
   appleTransactionId    String?       @unique
+  appleOriginalTransactionId String?
+  googlePurchaseToken   String?       @unique
+  googleOrderId         String?
   packId                String?
   purchaseType          String        @default("credits")
   credits               Int
@@ -179,6 +183,22 @@ model SignAudit {
   fileName  String
   level     String   @default("SES")
   pageCount Int      @default(1)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/// A signed PDF the user chose to keep in their cloud library. The file itself
+/// lives in `data`, so uploads are capped and pruned per user (see
+/// `lib/signed-documents.ts`) to keep the database from growing unbounded.
+model SignedDocument {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileName  String
+  pageCount Int      @default(1)
+  byteSize  Int
+  data      Bytes
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])

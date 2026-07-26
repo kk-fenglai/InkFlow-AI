@@ -13,6 +13,7 @@ import {
   base64ToBlob,
   triggerDownloadBlob,
 } from "@/lib/sign-client";
+import { uploadCloudDocument } from "@/lib/documents-api";
 
 const PdfSignaturePlacer = dynamic(
   () => import("@/components/PdfSignaturePlacer"),
@@ -25,6 +26,21 @@ const PdfSignaturePlacer = dynamic(
     ),
   },
 );
+
+const SignedPdfPreview = dynamic(() => import("@/components/SignedPdfPreview"), {
+  ssr: false,
+  loading: () => (
+    <p className="font-body-md text-body-md text-on-surface-variant py-xxl text-center">
+      Rendering signed document…
+    </p>
+  ),
+});
+
+interface SignedResult {
+  pdfBase64: string;
+  fileName: string;
+  pageIndex: number;
+}
 
 export default function SignPlacePage() {
   const { status } = useSession();
@@ -43,6 +59,12 @@ export default function SignPlacePage() {
   const [sesAccepted, setSesAccepted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+
+  // The signed file is held here so the user reviews it before deciding where
+  // it goes — download, cloud library, or both.
+  const [result, setResult] = useState<SignedResult | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadedId, setUploadedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!getSignDraft()) {
@@ -124,17 +146,133 @@ export default function SignPlacePage() {
         return;
       }
 
-      const blob = base64ToBlob(data.pdfBase64, "application/pdf");
-      triggerDownloadBlob(blob, data.fileName ?? "signed.pdf");
       trackEvent("sign_pdf", { fileName: draft.fileName });
       refresh();
-      clearSignDraft();
-      setMsg(`Signed — ${CREDIT_COST.SIGN_PDF} credit used. Download started.`);
+      setResult({
+        pdfBase64: data.pdfBase64,
+        fileName: data.fileName ?? "signed.pdf",
+        pageIndex,
+      });
+      setMsg("");
     } catch {
       setMsg("Network error. Try again.");
     } finally {
       setBusy(false);
     }
+  }
+
+  function downloadResult() {
+    if (!result) return;
+    const blob = base64ToBlob(result.pdfBase64, "application/pdf");
+    triggerDownloadBlob(blob, result.fileName);
+    setMsg(`Downloaded ${result.fileName}.`);
+  }
+
+  async function uploadResult() {
+    if (!result || uploading) return;
+    setUploading(true);
+    setMsg("");
+    const res = await uploadCloudDocument({
+      pdfBase64: result.pdfBase64,
+      fileName: result.fileName,
+    });
+    setUploading(false);
+    if (!res.ok) {
+      setMsg(res.error ?? "Upload failed.");
+      return;
+    }
+    setUploadedId(res.document?.id ?? "saved");
+    setMsg(`Saved to your cloud library as ${result.fileName}.`);
+  }
+
+  function signAnother() {
+    clearSignDraft();
+    router.push("/sign");
+  }
+
+  if (result) {
+    return (
+      <main className="flex-grow w-full min-h-[calc(100vh-8rem)] flex flex-col">
+        <header className="border-b border-outline-variant/30 bg-surface-container-low">
+          <div className="mx-auto max-w-[960px] px-md py-lg sm:px-lg text-center">
+            <p className="font-label-sm text-label-sm text-tertiary uppercase tracking-wide">
+              {CREDIT_COST.SIGN_PDF} credit used
+            </p>
+            <h1 className="font-headline-sm text-headline-sm text-on-surface mt-xs">
+              Document signed
+            </h1>
+            <p className="font-body-md text-body-md text-on-surface-variant mt-xs">
+              Review the signed document below, then download it or keep it in
+              your cloud library.
+            </p>
+          </div>
+        </header>
+
+        <div className="flex-grow px-md py-lg sm:px-lg">
+          <div className="max-w-[960px] mx-auto space-y-lg">
+            <SignedPdfPreview
+              pdfBase64={result.pdfBase64}
+              initialPage={result.pageIndex}
+            />
+
+            <div className="mx-auto max-w-[560px] space-y-sm">
+              <p className="font-label-md text-label-md text-on-surface text-center break-all">
+                {result.fileName}
+              </p>
+
+              <button
+                type="button"
+                onClick={downloadResult}
+                className="w-full py-md bg-tertiary text-on-tertiary rounded font-label-md hover:bg-tertiary/90 transition-colors"
+              >
+                Download PDF
+              </button>
+
+              <button
+                type="button"
+                disabled={uploading || uploadedId !== null}
+                onClick={() => void uploadResult()}
+                className="w-full py-md rounded border border-outline-variant/60 font-label-md text-on-surface hover:border-tertiary disabled:opacity-50 transition-colors"
+              >
+                {uploadedId
+                  ? "✓ In your cloud library"
+                  : uploading
+                    ? "Uploading…"
+                    : "Save to cloud library"}
+              </button>
+
+              <div className="flex flex-wrap justify-center gap-md pt-xs">
+                <button
+                  type="button"
+                  onClick={signAnother}
+                  className="font-label-md text-label-md text-on-surface-variant hover:text-tertiary"
+                >
+                  Sign another document
+                </button>
+                <Link
+                  href="/library?tab=documents"
+                  className="font-label-md text-label-md text-on-surface-variant hover:text-tertiary"
+                >
+                  Open cloud library →
+                </Link>
+              </div>
+
+              {msg && (
+                <p
+                  className={`font-body-md text-body-md text-center ${
+                    msg.startsWith("Saved") || msg.startsWith("Downloaded")
+                      ? "text-tertiary"
+                      : "text-error"
+                  }`}
+                >
+                  {msg}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -242,9 +380,7 @@ export default function SignPlacePage() {
             onClick={() => void signDocument()}
             className="w-full py-md bg-tertiary text-on-tertiary rounded font-label-md hover:bg-tertiary/90 disabled:opacity-50 transition-colors"
           >
-            {busy
-              ? "Signing…"
-              : `Sign & download (${CREDIT_COST.SIGN_PDF} cr)`}
+            {busy ? "Signing…" : `Sign document (${CREDIT_COST.SIGN_PDF} cr)`}
           </button>
 
           {authenticated && (

@@ -28,6 +28,11 @@ yarn-error.log*
 # local tooling artifacts
 cmdline-tools.zip
 .playwright-mcp/
+.claude/
+
+# graphify knowledge graph (rebuilt locally by the post-commit hook)
+graphify-out/
+android/graphify-out/
 
 # database
 /prisma/dev.db

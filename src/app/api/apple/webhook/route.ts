@@ -1,20 +1,21 @@
+import { handleAppleServerNotification } from "@/lib/apple/handle-notification";
 import {
   jsonWithMobileCors,
   mobileOptionsResponse,
 } from "@/lib/mobile-auth/cors";
 
 /**
- * App Store Server Notifications V2 endpoint.
- * Configure URL in App Store Connect → App → App Information → App Store Server Notifications.
- *
- * Full JWS verification and renewal handling to be extended in phase 2c.
+ * App Store Server Notifications V2.
+ * Configure in App Store Connect → App → App Information →
+ * App Store Server Notifications → Production / Sandbox URL:
+ * https://signaturegeneratorai.vercel.app/api/apple/webhook
  */
 export async function OPTIONS(req: Request) {
   return mobileOptionsResponse(req);
 }
 
 export async function POST(req: Request) {
-  let body: unknown;
+  let body: { signedPayload?: string };
   try {
     body = await req.json();
   } catch {
@@ -25,15 +26,24 @@ export async function POST(req: Request) {
     );
   }
 
-  console.info("[apple/webhook] notification received", {
-    hasSignedPayload: Boolean(
-      body &&
-        typeof body === "object" &&
-        "signedPayload" in body &&
-        (body as { signedPayload?: string }).signedPayload,
-    ),
-  });
+  const signedPayload = body.signedPayload?.trim();
+  if (!signedPayload) {
+    return jsonWithMobileCors(
+      req,
+      { error: "signedPayload required.", code: "VALIDATION" },
+      { status: 400 },
+    );
+  }
 
-  // Apple expects 200 to acknowledge receipt; process async in future iteration.
-  return jsonWithMobileCors(req, { ok: true });
+  const result = await handleAppleServerNotification(signedPayload);
+  if (!result.ok) {
+    console.error("[apple/webhook] verify failed", result.error);
+    return jsonWithMobileCors(
+      req,
+      { error: "Verification failed.", code: result.error },
+      { status: 400 },
+    );
+  }
+
+  return jsonWithMobileCors(req, { ok: true, handled: result.handled });
 }

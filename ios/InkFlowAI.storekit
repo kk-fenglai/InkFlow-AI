@@ -1,0 +1,111 @@
+{
+  "identifier" : "InkFlowAI",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "CREDITS_20",
+      "localizations" : [
+        {
+          "description" : "20 InkFlow credits for signature generation and PDF signing.",
+          "displayName" : "20 Credits",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.inkflow.ai.credits.20",
+      "referenceName" : "20 Credits",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "CREDITS_50",
+      "localizations" : [
+        {
+          "description" : "50 InkFlow credits.",
+          "displayName" : "50 Credits",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.inkflow.ai.credits.50",
+      "referenceName" : "50 Credits",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "14.99",
+      "familyShareable" : false,
+      "internalID" : "CREDITS_120",
+      "localizations" : [
+        {
+          "description" : "120 InkFlow credits.",
+          "displayName" : "120 Credits",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.inkflow.ai.credits.120",
+      "referenceName" : "120 Credits",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "INKFLOW_PRO",
+      "localizations" : [
+        {
+          "displayName" : "Studio Pro",
+          "locale" : "en_US"
+        }
+      ],
+      "name" : "Studio Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "11.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "PRO_MONTHLY",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "120 credits every month and Pro templates.",
+              "displayName" : "Studio Pro Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.inkflow.ai.pro.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Studio Pro Monthly",
+          "subscriptionGroupID" : "INKFLOW_PRO",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

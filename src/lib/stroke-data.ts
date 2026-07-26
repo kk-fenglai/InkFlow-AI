@@ -21,6 +21,45 @@ export interface SignatureStrokeData {
   strokes: SignatureStroke[];
   settings: SignatureSettings;
   createdAt: string;
+  /** "captured" entries hold a photographed signature instead of vector strokes. */
+  kind?: "vector" | "captured";
+  /** Transparent PNG data URL for captured signatures (extracted from a photo). */
+  capturedImage?: string | null;
+}
+
+/**
+ * Wrap an extracted (photographed) signature as stroke data so it can live in
+ * the same cloud-library column as vector signatures. No real strokes — the
+ * transparent PNG is carried in `capturedImage` and rendered directly.
+ */
+export function buildCapturedStrokeData(
+  capturedImage: string,
+  name: string,
+  width: number,
+  height: number,
+): SignatureStrokeData {
+  const text = name.trim().slice(0, 60) || "Handwritten signature";
+  return {
+    version: 1,
+    width,
+    height,
+    text,
+    baseId: "captured",
+    kind: "captured",
+    capturedImage,
+    strokes: [],
+    settings: {
+      text,
+      baseId: "captured" as SignatureSettings["baseId"],
+      fluidity: 0,
+      rhythm: 0,
+      pressure: 0,
+      slant: 0,
+      size: 1,
+      inkColor: "#1d1c16",
+    },
+    createdAt: new Date().toISOString(),
+  };
 }
 
 interface CharLayout {

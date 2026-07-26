@@ -31,9 +31,13 @@ class AuthStore(
         isLoading = true
         try {
             user = api.fetchMe()
-        } catch (_: Exception) {
-            user = null
-            api.clearTokens()
+        } catch (e: Exception) {
+            // Only a rejected token should end the session. Failing because the
+            // device is offline would otherwise sign the user out mid-session.
+            if ((e as? ApiException)?.code != ApiClient.OFFLINE_CODE) {
+                user = null
+                api.clearTokens()
+            }
         } finally {
             isLoading = false
         }

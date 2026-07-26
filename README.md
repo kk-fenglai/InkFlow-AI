@@ -12,6 +12,13 @@ Includes **login, credits, Stripe billing (test mode), and server-backed AI gene
 | **Refinement Workbench** | `/refine` | Upload + client-side ink isolation. **Save PNG** (1 credit) runs server analysis and exports. |
 | **Account** | `/account` | Sign in, credit balance, buy packs via Stripe. |
 
+Native mobile clients (same API / credits):
+
+| Client | Path | Notes |
+| --- | --- | --- |
+| **iOS (SwiftUI)** | [`ios/`](ios/) | App Store / StoreKit — see [`docs/IOS_APP_STORE_PLAN.md`](docs/IOS_APP_STORE_PLAN.md) |
+| **Android (Kotlin)** | [`android/`](android/) | Native Compose MVP + Play Billing — see [`docs/ANDROID_PLAY_GUIDE.md`](docs/ANDROID_PLAY_GUIDE.md) |
+
 ## Three-step monetization (implemented)
 
 ### Step 1 — Login & credits (mock-ready)

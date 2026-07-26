@@ -10,6 +10,24 @@ import {
   type ImageStats,
 } from "@/lib/ink-refine";
 import { downloadCanvasPng } from "@/lib/canvas-export";
+import { useCredits } from "@/hooks/useCredits";
+import { saveCapturedSignature } from "@/lib/signature-api";
+import { CREDIT_COST } from "@/lib/constants";
+
+/** Flag photos that aren't clean black-ink-on-white-paper for best extraction. */
+function captureQualityWarning(stats: ImageStats): string {
+  const contrast = stats.paperLuminance - stats.inkLuminance;
+  if (stats.paperLuminance < 165) {
+    return "Background looks dim — photograph black ink on white paper in bright, even light.";
+  }
+  if (stats.darkPixelRatio > 0.55) {
+    return "Too much of the frame is dark — crop closer to the signature on white paper.";
+  }
+  if (contrast < 45) {
+    return "Low contrast — use a darker pen and brighter light so the strokes stand out.";
+  }
+  return "";
+}
 
 const STEPS = [
   {
@@ -45,9 +63,14 @@ export default function RefinePage() {
   const [dragOver, setDragOver] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
   const [imageStats, setImageStats] = useState<ImageStats | null>(null);
+  const [captureWarning, setCaptureWarning] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const { authenticated, refresh } = useCredits();
 
   const outputRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const loadFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) return;
@@ -71,6 +94,7 @@ export default function RefinePage() {
           setRefineStrength(suggested.refineStrength);
           setInkColor(suggested.inkColor);
           setStatusMsg(suggested.aiNote);
+          setCaptureWarning(captureQualityWarning(stats));
         }
       };
       img.src = reader.result as string;
@@ -142,6 +166,98 @@ export default function RefinePage() {
     if (!sourceImg) return;
     saveCanvas(false, "refined-signature.png");
     setStatusMsg("Transparent PNG saved — Refinement is free.");
+  }
+
+  /** Render the extracted signature onto a transparent canvas for cloud saving. */
+  function buildTransparentPng(): {
+    dataUrl: string;
+    width: number;
+    height: number;
+  } | null {
+    if (!sourceImg) return null;
+
+    const maxDim = 1000;
+    const swapped = rotation % 180 !== 0;
+    const srcW = sourceImg.naturalWidth;
+    const srcH = sourceImg.naturalHeight;
+    const scale = Math.min(1, maxDim / Math.max(srcW, srcH));
+    const w = Math.round(srcW * scale);
+    const h = Math.round(srcH * scale);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = swapped ? h : w;
+    canvas.height = swapped ? w : h;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return null;
+
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.drawImage(sourceImg, -w / 2, -h / 2, w, h);
+    ctx.restore();
+
+    const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const processed = processInkPixels(data, canvas.width, canvas.height, {
+      threshold,
+      smoothing,
+      inkColor,
+      transparentBg: true,
+      refineStrength,
+    });
+    const out = ctx.createImageData(canvas.width, canvas.height);
+    out.data.set(processed);
+    ctx.putImageData(out, 0, 0);
+
+    return {
+      dataUrl: canvas.toDataURL("image/png"),
+      width: canvas.width,
+      height: canvas.height,
+    };
+  }
+
+  async function saveToCloud() {
+    if (!sourceImg || saving) return;
+    if (!authenticated) {
+      setStatusMsg("Sign in to save this signature to your cloud library.");
+      return;
+    }
+
+    const png = buildTransparentPng();
+    if (!png) {
+      setStatusMsg("Could not process the image — try re-uploading.");
+      return;
+    }
+
+    const suggested =
+      window.prompt("Name this signature", "Handwritten signature") ?? "";
+    const name = suggested.trim();
+    if (!name) return;
+
+    setSaving(true);
+    setStatusMsg("Saving to your cloud library…");
+    const result = await saveCapturedSignature({
+      name,
+      capturedImage: png.dataUrl,
+      canvasWidth: png.width,
+      canvasHeight: png.height,
+    });
+    setSaving(false);
+
+    if (result.ok) {
+      void refresh();
+      setStatusMsg(
+        `Saved “${name}” to your cloud library (1 credit). View it in Library.`,
+      );
+      return;
+    }
+
+    if (result.code === "INSUFFICIENT_CREDITS") {
+      setStatusMsg("Not enough credits — saving a signature costs 1 credit.");
+    } else if (result.code === "UNAUTHORIZED") {
+      setStatusMsg("Sign in to save this signature to your cloud library.");
+    } else {
+      setStatusMsg(result.error ?? "Save failed. Please try again.");
+    }
   }
 
   return (
@@ -255,6 +371,60 @@ export default function RefinePage() {
                 if (file) loadFile(file);
               }}
             />
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) loadFile(file);
+              }}
+            />
+          </div>
+
+          {/* Capture / upload actions + white-paper guidance */}
+          <div className="flex flex-col gap-sm">
+            <div className="flex gap-sm">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  cameraInputRef.current?.click();
+                }}
+                className="flex-1 py-sm px-md bg-tertiary text-on-tertiary rounded font-label-md text-label-md hover:bg-tertiary/90 transition-colors flex justify-center items-center gap-xs"
+              >
+                <span className="material-symbols-outlined text-[18px]">
+                  photo_camera
+                </span>
+                Take Photo
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex-1 py-sm px-md border border-outline-variant rounded font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high transition-colors flex justify-center items-center gap-xs"
+              >
+                <span className="material-symbols-outlined text-[18px]">
+                  upload
+                </span>
+                Upload
+              </button>
+            </div>
+            <p className="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-xs">
+              <span className="material-symbols-outlined text-[16px] text-tertiary">
+                lightbulb
+              </span>
+              For best results, use black ink on plain white paper.
+            </p>
+            {captureWarning && (
+              <p className="font-label-sm text-label-sm text-error flex items-center gap-xs">
+                <span className="material-symbols-outlined text-[16px]">
+                  warning
+                </span>
+                {captureWarning}
+              </p>
+            )}
           </div>
 
           {/* Adjustment controls */}
@@ -380,6 +550,22 @@ export default function RefinePage() {
             </button>
             <p className="font-label-sm text-label-sm text-center text-on-surface-variant">
               Free — processed in your browser
+            </p>
+            <button
+              type="button"
+              disabled={!sourceImg || saving}
+              onClick={() => void saveToCloud()}
+              className="py-md px-sm bg-primary text-on-primary rounded font-label-md text-label-md hover:bg-primary/90 transition-colors flex justify-center items-center gap-sm artisan-shadow disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <span className="material-symbols-outlined text-[20px]">
+                cloud_upload
+              </span>
+              {saving ? "Saving…" : "Save to Cloud Library"}
+            </button>
+            <p className="font-label-sm text-label-sm text-center text-on-surface-variant">
+              {authenticated
+                ? `Stores the extracted signature in your library · ${CREDIT_COST.SAVE_SIGNATURE} credit`
+                : "Sign in to save · 1 credit"}
             </p>
             <button
               type="button"

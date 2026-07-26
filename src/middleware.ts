@@ -48,5 +48,6 @@ export const config = {
     "/admin/:path*",
     "/api/mobile/:path*",
     "/api/apple/:path*",
+    "/api/google/:path*",
   ],
 };

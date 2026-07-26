@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const MOBILE_API_PREFIXES = ["/api/mobile", "/api/apple"];
+const MOBILE_API_PREFIXES = ["/api/mobile", "/api/apple", "/api/google"];
 
 export function isMobileApiPath(pathname: string): boolean {
   return MOBILE_API_PREFIXES.some((prefix) => pathname.startsWith(prefix));

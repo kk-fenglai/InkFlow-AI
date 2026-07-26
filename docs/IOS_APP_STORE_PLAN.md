@@ -1,6 +1,6 @@
 # InkFlow AI — 苹果 App Store 上架规划
 
-> 文档版本：**2026-06-15**（已同步代码现状）  
+> 文档版本：**2026-07-17**（已同步代码现状）  
 > 线上网站：https://signaturegeneratorai.vercel.app  
 > 仓库：InkFlow AI（Next.js 14 + Vercel + Neon）  
 > iOS 工程：`ios/`（与 Web 同仓，**无需单独再建工程**）
@@ -12,11 +12,15 @@
 | 阶段 | 完成度 | 说明 |
 |------|--------|------|
 | **阶段 0** 账号与 Connect | ~0% | 需你注册 Apple Developer、创建 IAP |
-| **阶段 1** 后端移动端 | **~90%** | 已部署生产；webhook 为 stub |
-| **阶段 2** SwiftUI 客户端 | **~70%** | 主流程已实现；需在 Mac 编译联调 |
-| **阶段 3** TestFlight / 提审 | 未开始 | 依赖阶段 0 + Mac 测试 |
+| **阶段 1** 后端移动端 | **~95%** | webhook 续订/退款已实现；待生产 env |
+| **阶段 2** SwiftUI 客户端 | **~80%** | 模板/滑块、StoreKit 配置、图标结构；需 Mac 联调 |
+| **阶段 3** TestFlight / 提审 | 未开始 | 见 `IOS_SUBMISSION_CHECKLIST.md` |
 
-**整体约 55–60%**（以可上架为准，不是代码行数）。
+**整体约 65–70%**（以可上架为准）。
+
+**操作指南：**
+- [App Store Connect 逐步配置](./IOS_APP_STORE_CONNECT.md)
+- [提审 Checklist](./IOS_SUBMISSION_CHECKLIST.md)
 
 ---
 
@@ -33,7 +37,7 @@
 
 ---
 
-## 二、现状（2026-06-15）
+## 二、现状（2026-07-17）
 
 ### 架构（不变）
 
@@ -59,7 +63,8 @@
 | Apple 购买结算 | `src/lib/payments/settle-apple-purchase.ts` |
 | Prisma 扩展 | `MobileRefreshToken`、`CreditPurchase.paymentProvider`、`appleTransactionId` |
 | 迁移 | `prisma/migrations/20250616120000_mobile_auth_apple_iap/` |
-| 环境变量模板 | `.env.example`（`JWT_ACCESS_SECRET`、`MOBILE_CORS_ORIGINS`、`APPLE_IAP_*`） |
+| Apple webhook 续订 / 退款 | `src/lib/apple/handle-notification.ts` |
+| `appleOriginalTransactionId` 迁移 | `prisma/migrations/20250717120000_*` |
 
 #### iOS 客户端（阶段 2）
 
@@ -68,15 +73,16 @@
 | 工程配置（XcodeGen） | ✅ | `ios/project.yml`、`ios/setup-mac.sh` |
 | 登录 / 注册 | ✅ | `Features/Auth/` |
 | 忘记密码 | ✅ | `ForgotPasswordView.swift` → `/api/auth/forgot-password` |
-| Studio 生成 + 预览 + 分享 PNG | ✅ | `Features/Studio/` |
+| Studio 生成 + 模板 + 滑块 | ✅ | `Features/Studio/`、`SignatureBases.swift` |
 | 保存到 Cloud Library | ✅ | `POST /api/signatures` |
 | Cloud Library 列表 / 删除 | ✅ | `Features/Library/` |
 | Refinement 上传 + 分析 | ✅ | `Features/Refine/`（免费分析，无本地导出） |
 | PDF 签署 + 分享 | ✅ | `Features/SignPDF/`（PDFKit，1 积分） |
 | 账户 / 积分 / 登出 | ✅ | `Features/Account/` |
 | 删除账户 | ✅ | `DELETE /api/account` |
-| StoreKit 2 购买 UI | ✅ | `PricingView.swift`、`StoreManager.swift` |
-| 恢复购买（基础） | ✅ | `AppStore.sync()` |
+| StoreKit 2 购买 + 恢复 | ✅ | `StoreManager.swift`（订阅 entitlement 同步后端） |
+| App Icon / Assets 结构 | ✅ | `Resources/Assets.xcassets/` + `prepare-icons.sh` |
+| StoreKit 本地配置 | ✅ | `InkFlowAI.storekit` |
 | API Client + Keychain | ✅ | `Core/APIClient.swift`、`KeychainHelper.swift` |
 | 笔迹预览渲染 | ✅ | `Core/SignaturePreviewView.swift` |
 
@@ -92,18 +98,16 @@
 
 | 项目 | 优先级 | 说明 |
 |------|--------|------|
-| Apple Developer 账号 | **高** | 阶段 0，$99/年 |
-| App Store Connect App + IAP 商品 | **高** | ID 须与上表一致 |
-| Mac 上生成 `.xcodeproj` 并联调 | **高** | Windows 无法打包 |
-| App 图标 `Assets.xcassets` | **高** | 提审必需 |
-| `/api/apple/webhook` 业务逻辑 | **高** | 目前仅记录日志并返回 200 |
-| 恢复购买 → 后端重新校验 | 中 | 现仅 `AppStore.sync()`，未逐笔 verify |
-| Studio 多模板 / 滑块调参 | 中 | 未接 `/api/tune`，仅默认 `baseId: poet` |
-| Refine 本地图像导出 | 中 | Web 有客户端处理，iOS 仅 API 分析 |
-| Sign PDF 多页 / 捏合缩放 | 低 | 当前主要支持首页 + 拖拽 |
+| Apple Developer 账号 | **高** | 见 `IOS_APP_STORE_CONNECT.md` 第 1 节 |
+| App Store Connect App + IAP | **高** | 见 Connect 指南第 3–4 节 |
+| Mac 联调 + TestFlight | **高** | `ios/setup-mac.sh` |
+| App Icon 1024 PNG 文件 | **高** | 运行 `prepare-icons.sh` 生成 |
+| Vercel 生产 env + migrate | **高** | 含新 `appleOriginalTransactionId` 迁移 |
+| Refine 本地图像导出 | 中 | Web 有完整处理，iOS 仅分析 |
+| Premium 模板解锁 UI | 中 | 10 个免费模板已有，40 个 premium 待接 |
+| Sign PDF 多页 / 捏合缩放 | 低 | 当前首页 + 拖拽 |
 | Universal Links 重置密码 | 低 | 邮件仍跳网站 |
-| 隐私政策移动端补充 | 中 | `src/app/privacy` 需写明 App 数据收集 |
-| TestFlight / 截图 / 审核文案 | 中 | 阶段 3 |
+| TestFlight 截图 / 审核文案 | 中 | 见 `IOS_SUBMISSION_CHECKLIST.md` |
 
 ---
 
@@ -144,7 +148,7 @@
 
 ---
 
-### 阶段 1 — 后端移动端（3–4 周）【~90% 完成】
+### 阶段 1 — 后端移动端【~95% 完成】
 
 #### 1.1 移动端 JWT 认证
 
@@ -169,14 +173,14 @@
 |------|------|
 | `GET /api/apple/products` | ✅ |
 | `POST /api/apple/verify-transaction` | ✅（沙盒可用 transactionId；生产需 JWS） |
-| `POST /api/apple/webhook` | ⚠️ stub only |
+| `POST /api/apple/webhook` | ✅ 续订入账 / 退款撤销 |
 | Prisma `paymentProvider` / `appleTransactionId` | ✅ |
 
 #### 1.4 深链（可选）
 
 - [ ] Universal Links / URL Scheme：`inkflow://reset-password?token=`
 
-**阶段 1 剩余工作：** webhook 续费/退款、Vercel 生产 env 核对、关闭 `APPLE_IAP_SKIP_VERIFY`。
+**阶段 1 剩余工作：** Vercel 生产 env 核对、`prisma migrate deploy`、关闭 `APPLE_IAP_SKIP_VERIFY`。
 
 ---
 
@@ -302,8 +306,8 @@ Xcode → Signing 选 Team → ⌘R 运行。
 | 阶段 | 原估 | 当前 |
 |------|------|------|
 | 阶段 0 准备 | 1–2 周 | 未开始 |
-| 阶段 1 后端 | 3–4 周 | **~90%**，剩 webhook + env |
-| 阶段 2 SwiftUI | 10–14 周 | **~70%**，剩 Mac 联调 + 增强 |
+| 阶段 1 后端 | 3–4 周 | **~95%**，剩 env + migrate |
+| 阶段 2 SwiftUI | 10–14 周 | **~80%**，剩 Mac 联调 + premium 模板 |
 | 阶段 3 提审 | 3–4 周 | 未开始 |
 | **距上架（乐观）** | — | **约 4–8 周**（假设已有 Mac + 开发者账号） |
 
@@ -351,7 +355,7 @@ Xcode → Signing 选 Team → ⌘R 运行。
 - [x] `POST /api/mobile/login` 等认证接口  
 - [x] Bearer 鉴权（`getAuthenticatedUser`）  
 - [x] `POST /api/apple/verify-transaction`  
-- [⚠️] `POST /api/apple/webhook`（stub）  
+- [x] `POST /api/apple/webhook`
 - [x] Prisma Apple / mobile 字段  
 - [ ] Vercel 生产 env 完整配置  
 
@@ -398,6 +402,7 @@ Xcode → Signing 选 Team → ⌘R 运行。
 | 定价常量 | `src/lib/constants.ts` |
 | 隐私政策页 | `src/app/privacy/page.tsx` |
 | 设计 token（Web） | `tailwind.config.ts` |
+| StoreKit 本地配置 | `ios/InkFlowAI.storekit` |
 | 设计 token（iOS） | `ios/InkFlowAI/Core/DesignTokens.swift` |
 
 ---
@@ -406,7 +411,7 @@ Xcode → Signing 选 Team → ⌘R 运行。
 
 1. **你：** 注册 Apple Developer + Connect 建 App / IAP  
 2. **你（Mac）：** `setup-mac.sh` → 全流程测试  
-3. **开发：** webhook + 图标 + Studio/Refine 补齐  
+3. **开发：** premium 模板、Refine 导出、图标 PNG  
 4. **运营：** 截图、隐私问卷、TestFlight  
 5. **提审**  
 

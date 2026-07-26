@@ -79,11 +79,7 @@ fun BrandTopBar(title: String = "InkFlow AI") {
  * left, credits pill and account avatar on the right.
  */
 @Composable
-fun AppTopBar(
-    credits: Int?,
-    initial: String,
-    onAccountClick: () -> Unit,
-) {
+fun AppTopBar(credits: Int?) {
     Column {
         Row(
             modifier = Modifier
@@ -112,7 +108,6 @@ fun AppTopBar(
                     modifier = Modifier
                         .clip(RoundedCornerShape(999.dp))
                         .background(DesignTokens.SurfaceContainerLow)
-                        .clickable(onClick = onAccountClick)
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -129,22 +124,6 @@ fun AppTopBar(
                         color = DesignTokens.OnSurface,
                     )
                 }
-                Spacer(Modifier.width(10.dp))
-            }
-
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(DesignTokens.Secondary.copy(alpha = 0.12f))
-                    .clickable(onClick = onAccountClick),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    initial.take(1).uppercase(),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = DesignTokens.Secondary,
-                )
             }
         }
         HorizontalDivider(color = DesignTokens.SurfaceContainerHigh, thickness = 1.dp)

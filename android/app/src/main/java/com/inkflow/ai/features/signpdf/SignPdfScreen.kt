@@ -2,9 +2,7 @@ package com.inkflow.ai.features.signpdf
 
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.pdf.PdfRenderer
 import android.os.Build
-import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
 import android.content.ContentValues
 import android.util.Base64
@@ -57,6 +55,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -82,8 +81,10 @@ import com.inkflow.ai.core.AuthStore
 import com.inkflow.ai.core.DesignTokens
 import com.inkflow.ai.core.SavedSignatureDto
 import com.inkflow.ai.core.SignPdfState
-import com.inkflow.ai.core.SignaturePreview
-import com.inkflow.ai.core.renderStrokeBitmap
+import com.inkflow.ai.core.SignatureBases
+import com.inkflow.ai.core.SignatureFontArt
+import com.inkflow.ai.core.renderPdfPage
+import com.inkflow.ai.core.renderSignatureFontBitmap
 import com.inkflow.ai.ui.ErrorText
 import com.inkflow.ai.ui.InkCard
 import com.inkflow.ai.ui.InkChip
@@ -132,7 +133,13 @@ fun SignPdfScreen(
     var savedNote by state::savedNote
     var error by state::error
 
+    var signedPreview by state::signedPreview
+    var signedPageIndex by state::signedPageIndex
+    var signedPageCount by state::signedPageCount
+    var uploadedDocId by state::uploadedDocId
+
     var signing by remember { mutableStateOf(false) }
+    var uploading by remember { mutableStateOf(false) }
 
     val pdfPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
@@ -167,40 +174,124 @@ fun SignPdfScreen(
     }
 
     LaunchedEffect(selectedSig) {
-        sigBitmap = selectedSig?.let {
-            withContext(Dispatchers.Default) { renderStrokeBitmap(it.strokeData, width = 600) }
+        sigBitmap = selectedSig?.let { sig ->
+            val assets = context.assets
+            val base = SignatureBases.find(sig.strokeData.baseId)
+            withContext(Dispatchers.Default) {
+                renderSignatureFontBitmap(
+                    assets = assets,
+                    text = sig.strokeData.text,
+                    fontFamily = base.fontFamily,
+                    slantDeg = sig.strokeData.settings.slant ?: base.slant,
+                    sizeMul = sig.strokeData.settings.size ?: base.size,
+                    inkColorHex = sig.strokeData.settings.inkColor,
+                    width = 600,
+                    height = 240,
+                )
+            }
         }
     }
 
     LaunchedEffect(pdfBytes, pageIndex) {
         val bytes = pdfBytes ?: return@LaunchedEffect
         withContext(Dispatchers.IO) {
-            runCatching {
-                val file = File(context.cacheDir, "signpdf-preview.pdf")
-                file.writeBytes(bytes)
-                ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { pfd ->
-                    PdfRenderer(pfd).use { renderer ->
-                        pageCount = renderer.pageCount
-                        val idx = pageIndex.coerceIn(0, renderer.pageCount - 1)
-                        renderer.openPage(idx).use { page ->
-                            pagePtsW = page.width.toFloat()
-                            pagePtsH = page.height.toFloat()
-                            val targetW = 1080
-                            val targetH =
-                                (targetW * page.height.toFloat() / page.width).roundToInt()
-                            val bmp = Bitmap.createBitmap(
-                                targetW,
-                                targetH,
-                                Bitmap.Config.ARGB_8888,
-                            )
-                            bmp.eraseColor(android.graphics.Color.WHITE)
-                            page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                            pageBitmap = bmp
-                        }
+            val render = renderPdfPage(context, bytes, pageIndex, "signpdf-preview.pdf")
+            if (render == null) {
+                error = "Could not preview PDF."
+            } else {
+                pageCount = render.pageCount
+                pagePtsW = render.ptsW
+                pagePtsH = render.ptsH
+                pageBitmap = render.bitmap
+            }
+        }
+    }
+
+    // The finished document is rendered back so the user reviews it before
+    // deciding where it goes.
+    LaunchedEffect(signedBytes, signedPageIndex) {
+        val bytes = signedBytes ?: return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            val render = renderPdfPage(context, bytes, signedPageIndex, "signed-preview.pdf")
+            if (render != null) {
+                signedPageCount = render.pageCount
+                signedPreview = render.bitmap
+            }
+        }
+    }
+
+    val finished = signedBytes
+    if (finished != null) {
+        SignedResultView(
+            fileName = signedName,
+            preview = signedPreview,
+            pageIndex = signedPageIndex,
+            pageCount = signedPageCount,
+            creditsRemaining = creditsRemaining,
+            uploaded = uploadedDocId != null,
+            uploading = uploading,
+            note = savedNote,
+            error = error,
+            canSaveToDownloads = Build.VERSION.SDK_INT >= 29,
+            onPageChange = { signedPageIndex = it },
+            onSave = {
+                scope.launch {
+                    val ok = withContext(Dispatchers.IO) {
+                        saveToDownloads(context, finished, signedName)
+                    }
+                    error = null
+                    savedNote = if (ok) {
+                        "Saved to Downloads as $signedName."
+                    } else {
+                        "Could not save — try Share instead."
                     }
                 }
-            }.onFailure { error = "Could not preview PDF: ${it.message}" }
-        }
+            },
+            onUpload = {
+                scope.launch {
+                    uploading = true
+                    error = null
+                    try {
+                        val b64 = withContext(Dispatchers.Default) {
+                            Base64.encodeToString(finished, Base64.NO_WRAP)
+                        }
+                        val res = apiClient.uploadDocument(signedName, b64)
+                        if (res.ok == true && res.document != null) {
+                            uploadedDocId = res.document.id
+                            savedNote = "Saved to your cloud library."
+                        } else {
+                            error = res.error ?: "Upload failed."
+                        }
+                    } catch (e: Exception) {
+                        error = e.message ?: "Upload failed."
+                    } finally {
+                        uploading = false
+                    }
+                }
+            },
+            onShare = {
+                scope.launch {
+                    val uri = withContext(Dispatchers.IO) {
+                        val dir = File(context.cacheDir, "shared").apply { mkdirs() }
+                        val file = File(dir, signedName)
+                        file.writeBytes(finished)
+                        FileProvider.getUriForFile(
+                            context,
+                            "${context.packageName}.fileprovider",
+                            file,
+                        )
+                    }
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "application/pdf"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    context.startActivity(Intent.createChooser(intent, "Share signed PDF"))
+                }
+            },
+            onSignAnother = { state.startNewDocument() },
+        )
+        return
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -321,7 +412,15 @@ fun SignPdfScreen(
                                     .clickable { selectedSig = sig },
                             ) {
                                 Column(Modifier.padding(10.dp)) {
-                                    SignaturePreview(strokeData = sig.strokeData, heightDp = 56)
+                                    val sigBase = SignatureBases.find(sig.strokeData.baseId)
+                                    SignatureFontArt(
+                                        text = sig.strokeData.text,
+                                        fontFamily = sigBase.fontFamily,
+                                        slantDeg = sig.strokeData.settings.slant ?: sigBase.slant,
+                                        sizeMul = sig.strokeData.settings.size ?: sigBase.size,
+                                        inkColorHex = sig.strokeData.settings.inkColor,
+                                        heightDp = 56,
+                                    )
                                     Spacer(Modifier.height(6.dp))
                                     Text(
                                         sig.name,
@@ -426,6 +525,9 @@ fun SignPdfScreen(
                                     signedBytes = Base64.decode(res.pdfBase64, Base64.DEFAULT)
                                     signedName = res.fileName ?: "signed.pdf"
                                     creditsRemaining = res.creditsRemaining
+                                    signedPreview = null
+                                    signedPageIndex = pageIndex
+                                    uploadedDocId = null
                                     authStore.refreshUser()
                                 } else {
                                     error = res.error ?: "Signing failed."
@@ -446,80 +548,181 @@ fun SignPdfScreen(
                 ErrorText(it)
             }
 
-            signedBytes?.let { bytes ->
-                Spacer(Modifier.height(20.dp))
-                InkCard(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        "Document Signed",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = DesignTokens.Ink,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        buildString {
-                            append(signedName)
-                            creditsRemaining?.let { append(" · $it credits left") }
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = DesignTokens.OnSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    if (Build.VERSION.SDK_INT >= 29) {
-                        InkPrimaryButton(
-                            text = "Save to Downloads",
-                            onClick = {
-                                scope.launch {
-                                    val ok = withContext(Dispatchers.IO) {
-                                        saveToDownloads(context, bytes, signedName)
-                                    }
-                                    savedNote = if (ok) {
-                                        "Saved to Downloads as $signedName."
-                                    } else {
-                                        "Could not save — try Share instead."
-                                    }
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        Spacer(Modifier.height(10.dp))
-                    }
-                    InkOutlinedButton(
-                        text = "Share Signed PDF",
-                        onClick = {
-                            scope.launch {
-                                val uri = withContext(Dispatchers.IO) {
-                                    val dir = File(context.cacheDir, "shared").apply { mkdirs() }
-                                    val file = File(dir, signedName)
-                                    file.writeBytes(bytes)
-                                    FileProvider.getUriForFile(
-                                        context,
-                                        "${context.packageName}.fileprovider",
-                                        file,
-                                    )
-                                }
-                                val intent = Intent(Intent.ACTION_SEND).apply {
-                                    type = "application/pdf"
-                                    putExtra(Intent.EXTRA_STREAM, uri)
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                }
-                                context.startActivity(Intent.createChooser(intent, "Share signed PDF"))
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    savedNote?.let {
-                        Spacer(Modifier.height(10.dp))
-                        Text(
-                            it,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = DesignTokens.Secondary,
-                        )
-                    }
-                }
-            }
-
             Spacer(Modifier.height(32.dp))
         }
+    }
+}
+
+/** Result step: what was signed, then where it should go. */
+@Composable
+private fun SignedResultView(
+    fileName: String,
+    preview: Bitmap?,
+    pageIndex: Int,
+    pageCount: Int,
+    creditsRemaining: Int?,
+    uploaded: Boolean,
+    uploading: Boolean,
+    note: String?,
+    error: String?,
+    canSaveToDownloads: Boolean,
+    onPageChange: (Int) -> Unit,
+    onSave: () -> Unit,
+    onUpload: () -> Unit,
+    onShare: () -> Unit,
+    onSignAnother: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp),
+    ) {
+        Spacer(Modifier.height(12.dp))
+        Text(
+            "Document Signed",
+            style = MaterialTheme.typography.displaySmall,
+            color = DesignTokens.Ink,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Review your signed document, then save it to this device or keep it " +
+                "in your cloud library.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = DesignTokens.OnSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(20.dp))
+
+        if (preview == null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(320.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(DesignTokens.SurfaceContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    "Rendering preview…",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = DesignTokens.OnSurfaceVariant,
+                )
+            }
+        } else {
+            Image(
+                bitmap = preview.asImageBitmap(),
+                contentDescription = "Signed document preview",
+                contentScale = ContentScale.FillWidth,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(preview.width.toFloat() / preview.height)
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(1.dp, DesignTokens.OutlineVariant, RoundedCornerShape(8.dp)),
+            )
+        }
+
+        if (pageCount > 1) {
+            Spacer(Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(
+                    onClick = { onPageChange(pageIndex - 1) },
+                    enabled = pageIndex > 0,
+                ) {
+                    Icon(
+                        Icons.Outlined.ChevronLeft,
+                        contentDescription = "Previous page",
+                        tint = DesignTokens.Ink,
+                    )
+                }
+                Text(
+                    "Page ${pageIndex + 1} of $pageCount",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = DesignTokens.OnSurface,
+                )
+                IconButton(
+                    onClick = { onPageChange(pageIndex + 1) },
+                    enabled = pageIndex < pageCount - 1,
+                ) {
+                    Icon(
+                        Icons.Outlined.ChevronRight,
+                        contentDescription = "Next page",
+                        tint = DesignTokens.Ink,
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(18.dp))
+        InkCard(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                fileName,
+                style = MaterialTheme.typography.titleMedium,
+                color = DesignTokens.Ink,
+            )
+            creditsRemaining?.let {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "1 credit used · $it credits left",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = DesignTokens.OnSurfaceVariant,
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+            if (canSaveToDownloads) {
+                InkPrimaryButton(
+                    text = "Save to Downloads",
+                    onClick = onSave,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(10.dp))
+            }
+            InkOutlinedButton(
+                text = when {
+                    uploaded -> "✓ In your cloud library"
+                    uploading -> "Uploading…"
+                    else -> "Save to Cloud Library"
+                },
+                onClick = onUpload,
+                enabled = !uploaded && !uploading,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(10.dp))
+            InkOutlinedButton(
+                text = "Share Signed PDF",
+                onClick = onShare,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            note?.let {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = DesignTokens.Secondary,
+                )
+            }
+            error?.let {
+                Spacer(Modifier.height(10.dp))
+                ErrorText(it)
+            }
+        }
+
+        Spacer(Modifier.height(14.dp))
+        InkOutlinedButton(
+            text = "Sign Another Document",
+            onClick = onSignAnother,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(32.dp))
     }
 }
 
@@ -605,6 +808,14 @@ private fun PagePreviewWithPlacement(
             val sigAspect = sigBitmap.height.toFloat() / sigBitmap.width
             val boxW = widthFrac * containerSize.width
             val boxH = boxW * sigAspect
+            // The drag closure below is captured once per containerSize and keeps
+            // running across recompositions — read live position/size through these
+            // so each incremental dragAmount accumulates instead of snapping back.
+            val fracXState = rememberUpdatedState(fracX)
+            val fracYState = rememberUpdatedState(fracY)
+            val boxWState = rememberUpdatedState(boxW)
+            val boxHState = rememberUpdatedState(boxH)
+            val onMoveState = rememberUpdatedState(onMove)
             Box(
                 modifier = Modifier
                     .offset {
@@ -624,12 +835,12 @@ private fun PagePreviewWithPlacement(
                     .pointerInput(containerSize) {
                         detectDragGestures { change, dragAmount ->
                             change.consume()
-                            val maxX = 1f - boxW / containerSize.width
-                            val maxY = 1f - boxH / containerSize.height
-                            onMove(
-                                (fracX + dragAmount.x / containerSize.width)
+                            val maxX = 1f - boxWState.value / containerSize.width
+                            val maxY = 1f - boxHState.value / containerSize.height
+                            onMoveState.value(
+                                (fracXState.value + dragAmount.x / containerSize.width)
                                     .coerceIn(0f, maxX.coerceAtLeast(0f)),
-                                (fracY + dragAmount.y / containerSize.height)
+                                (fracYState.value + dragAmount.y / containerSize.height)
                                     .coerceIn(0f, maxY.coerceAtLeast(0f)),
                             )
                         }

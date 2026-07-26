@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import { CREDIT_COST } from "@/lib/constants";
-import { deductCredits } from "@/lib/credits";
 import { getSessionUser } from "@/lib/session";
 import { buildStrokePayload, enhanceSignatureSettings, isValidBaseId } from "@/lib/server-ai";
 import type { SignatureSettings } from "@/lib/signature";
@@ -51,23 +49,8 @@ export async function POST(req: Request) {
   const locked = await premiumAccessResponse(user.id, settings.baseId);
   if (locked) return locked;
 
-  const deducted = await deductCredits(
-    user.id,
-    CREDIT_COST.GENERATE_FINAL,
-    "generate_final_ink",
-  );
-
-  if (!deducted.ok) {
-    return NextResponse.json(
-      {
-        error: "Not enough credits. Buy a pack on your account page.",
-        code: "INSUFFICIENT_CREDITS",
-        credits: deducted.remaining,
-      },
-      { status: 402 },
-    );
-  }
-
+  // Rendering the final ink is free — credits are charged only when the user
+  // chooses where to save it (local export or cloud library).
   const enhanced = enhanceSignatureSettings(settings);
   const canvasWidth = clamp(body.canvasWidth ?? 600, 200, 1200);
   const canvasHeight = clamp(body.canvasHeight ?? 240, 100, 600);
@@ -75,7 +58,7 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     ok: true,
-    creditsRemaining: deducted.remaining,
+    creditsRemaining: user.credits,
     settings: enhanced,
     strokeData,
     aiNote: enhanced.aiNote,

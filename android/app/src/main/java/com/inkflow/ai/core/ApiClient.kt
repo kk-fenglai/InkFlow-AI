@@ -11,10 +11,17 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.logging.HttpLoggingInterceptor
+import java.io.IOException
 import java.lang.reflect.Type
 import java.util.concurrent.TimeUnit
 
 class ApiClient(private val tokenStore: TokenStore) {
+    companion object {
+        const val OFFLINE_CODE = "NETWORK_UNAVAILABLE"
+        const val OFFLINE_MESSAGE =
+            "No internet connection. Please connect to a network and try again."
+    }
+
     private val gson = Gson()
     private val jsonMedia = "application/json; charset=utf-8".toMediaType()
     private val refreshMutex = Mutex()
@@ -138,14 +145,6 @@ class ApiClient(private val tokenStore: TokenStore) {
         post<OkResponse>("/api/auth/forgot-password", mapOf("email" to email), auth = false)
     }
 
-    suspend fun refine(imageBase64: String, stats: ImageStatsDto?): RefineResponse = post(
-        "/api/refine",
-        mapOf(
-            "imageBase64" to imageBase64,
-            "imageStats" to stats?.let { gson.toJsonTree(it) },
-        ),
-    )
-
     suspend fun signPdf(
         pdfBase64: String,
         signaturePngBase64: String,
@@ -169,6 +168,28 @@ class ApiClient(private val tokenStore: TokenStore) {
             "sesAccepted" to true,
         ),
     )
+
+    /** Keeps a finished PDF in the cloud library. Free — signing already charged. */
+    suspend fun uploadDocument(fileName: String, pdfBase64: String): DocumentResponse =
+        post(
+            "/api/documents",
+            mapOf("fileName" to fileName, "pdfBase64" to pdfBase64),
+        )
+
+    suspend fun fetchDocuments(): List<CloudDocumentDto> {
+        val res: DocumentsListResponse = get("/api/documents")
+        return res.documents.orEmpty()
+    }
+
+    suspend fun fetchDocument(id: String): CloudDocumentDto {
+        val res: DocumentResponse = get("/api/documents/$id")
+        return res.document
+            ?: throw ApiException(res.error ?: "Document not found.", res.code)
+    }
+
+    suspend fun deleteDocument(id: String) {
+        delete<OkResponse>("/api/documents/$id")
+    }
 
     private suspend inline fun <reified T> get(path: String): T =
         request(path, "GET", null, retryOn401 = true)
@@ -217,8 +238,18 @@ class ApiClient(private val tokenStore: TokenStore) {
             )
         }
 
-        val response = client.newCall(builder.build()).execute()
-        val bytes = response.body?.string().orEmpty()
+        // A dropped connection reads as "Unable to resolve host …" out of OkHttp;
+        // translate it into something a user can act on.
+        val response = try {
+            client.newCall(builder.build()).execute()
+        } catch (_: IOException) {
+            throw ApiException(OFFLINE_MESSAGE, OFFLINE_CODE)
+        }
+        val bytes = try {
+            response.body?.string().orEmpty()
+        } catch (_: IOException) {
+            throw ApiException(OFFLINE_MESSAGE, OFFLINE_CODE)
+        }
 
         if (response.code == 401 && retryOn401 && !isRetry) {
             refreshMutex.withLock {

@@ -1,4 +1,4 @@
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import { PDFDocument } from "pdf-lib";
 
 export interface SignPdfInput {
   pdfBytes: Uint8Array;
@@ -29,16 +29,6 @@ export async function embedSignatureOnPdf(
     y: input.y,
     width: input.width,
     height: input.height,
-  });
-
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-  const stamp = `InkFlow SES · ${new Date().toISOString()} · ${input.signerName}`;
-  page.drawText(stamp, {
-    x: input.x,
-    y: Math.max(8, input.y - 10),
-    size: 7,
-    font,
-    color: rgb(0.35, 0.35, 0.35),
   });
 
   doc.setTitle(doc.getTitle() || "Signed document");
