@@ -19,6 +19,7 @@ import {
   type TemplateTier,
 } from "@/lib/signature";
 import {
+  getDefaultStudioState,
   loadStudioDraftState,
   saveStudioDraft,
   type StudioTemplateFilter,
@@ -92,8 +93,10 @@ function Slider({
 }
 
 export default function StudioPage() {
-  const initial = useMemo(() => loadStudioDraftState(), []);
-  const draftReadyRef = useRef(false);
+  // Must match the server render exactly — the persisted draft is applied
+  // after hydration by the effect below, not during render.
+  const initial = useMemo(() => getDefaultStudioState(), []);
+  const [draftLoaded, setDraftLoaded] = useState(false);
 
   const [text, setText] = useState(initial.text);
   const [baseId, setBaseId] = useState<ArtistBaseId>(initial.baseId);
@@ -187,11 +190,26 @@ export default function StudioPage() {
   );
 
   useEffect(() => {
-    draftReadyRef.current = true;
+    const draft = loadStudioDraftState();
+    setText(draft.text);
+    setBaseId(draft.baseId);
+    setFluidity(draft.fluidity);
+    setRhythm(draft.rhythm);
+    setPressure(draft.pressure);
+    setSlant(draft.slant);
+    setSize(draft.size);
+    setInkColor(draft.inkColor);
+    setBackgroundImage(draft.backgroundImage);
+    setBackgroundEnabled(draft.backgroundEnabled);
+    setBackgroundOpacity(draft.backgroundOpacity);
+    setBackgroundFit(draft.backgroundFit);
+    setTemplateFilter(draft.templateFilter);
+    setNlInstruction(draft.nlInstruction);
+    setDraftLoaded(true);
   }, []);
 
   useEffect(() => {
-    if (!draftReadyRef.current) return;
+    if (!draftLoaded) return;
     const canvas = canvasRef.current?.getCanvas();
     saveStudioDraft({
       settings,
@@ -203,6 +221,7 @@ export default function StudioPage() {
       nlInstruction,
     });
   }, [
+    draftLoaded,
     settings,
     backgroundEnabled,
     backgroundImage,
@@ -667,7 +686,7 @@ export default function StudioPage() {
               id="nl-tune"
               value={nlInstruction}
               onChange={(e) => setNlInstruction(e.target.value)}
-              placeholder={`e.g.\n"Make it more fluid and connected"\n"更流畅、更有商务感"\n"Thicker strokes, extend the final flourish"`}
+              placeholder={`e.g.\n"Make it more fluid and connected"\n"More business-like and restrained"\n"Thicker strokes, extend the final flourish"`}
               rows={3}
               maxLength={200}
               className="w-full min-h-[70px] bg-surface-container-lowest border border-outline-variant rounded-lg px-md py-md font-body-lg text-body-lg text-on-surface resize-y focus:border-tertiary outline-none leading-relaxed"

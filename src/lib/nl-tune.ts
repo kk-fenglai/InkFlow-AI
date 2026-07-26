@@ -24,13 +24,12 @@ const KEYWORD_RULES: {
   label: string;
 }[] = [
   {
-    pattern:
-      /流畅|更流|连笔|flowing|fluid|smooth|connected|elegant|graceful/i,
+    pattern: /flowing|fluid|smooth|connected|elegant|graceful/i,
     apply: () => ({ fluidity: 12, rhythm: 4, slant: 2 }),
     label: "increased fluidity & connection",
   },
   {
-    pattern: /商务|专业|正式|稳重|business|professional|formal|corporate|executive/i,
+    pattern: /business|professional|formal|corporate|executive/i,
     apply: () => ({
       fluidity: -10,
       rhythm: 12,
@@ -41,52 +40,52 @@ const KEYWORD_RULES: {
     label: "business-like restraint",
   },
   {
-    pattern: /艺术|浪漫|飘逸|artistic|romantic|expressive|poetic/i,
+    pattern: /artistic|romantic|expressive|poetic/i,
     apply: () => ({ fluidity: 10, rhythm: -6, pressure: 6, baseId: "poet" }),
     label: "artistic expressiveness",
   },
   {
-    pattern: /粗|厚|bold|thick|heavy|strong|decisive/i,
+    pattern: /bold|thick|heavy|strong|decisive/i,
     apply: () => ({ pressure: 14, size: 0.06 }),
     label: "heavier stroke weight",
   },
   {
-    pattern: /细|轻|thin|light|delicate|subtle/i,
+    pattern: /thin|light|delicate|subtle/i,
     apply: () => ({ pressure: -14, size: -0.04 }),
     label: "lighter strokes",
   },
   {
-    pattern: /乱|随意|潦草|casual|messy|scratchy|quick/i,
+    pattern: /casual|messy|scratchy|quick/i,
     apply: () => ({ rhythm: -14, fluidity: 8, pressure: 10 }),
     label: "casual scratch energy",
   },
   {
-    pattern: /稳|整齐|consistent|steady|even|uniform/i,
+    pattern: /consistent|steady|even|uniform/i,
     apply: () => ({ rhythm: 14, fluidity: -4 }),
     label: "steadier rhythm",
   },
   {
-    pattern: /大|放大|bigger|larger|grand/i,
+    pattern: /bigger|larger|grand/i,
     apply: () => ({ size: 0.1 }),
     label: "larger scale",
   },
   {
-    pattern: /小|缩小|smaller|compact|tiny/i,
+    pattern: /smaller|compact|tiny/i,
     apply: () => ({ size: -0.1 }),
     label: "smaller scale",
   },
   {
-    pattern: /斜|倾斜|slant|italic|forward/i,
+    pattern: /slant|italic|forward/i,
     apply: () => ({ slant: 6 }),
     label: "forward slant",
   },
   {
-    pattern: /直| upright|vertical|straight/i,
+    pattern: /upright|vertical|straight/i,
     apply: (s) => ({ slant: s.slant > 0 ? -6 : 6 }),
     label: "upright alignment",
   },
   {
-    pattern: /极简|简洁|minimal|clean|simple|modern/i,
+    pattern: /minimal|clean|simple|modern/i,
     apply: () => ({
       fluidity: -8,
       pressure: -10,
@@ -96,12 +95,12 @@ const KEYWORD_RULES: {
     label: "minimal clarity",
   },
   {
-    pattern: /个性|大胆|maverick|confident|round/i,
+    pattern: /maverick|confident|round/i,
     apply: () => ({ pressure: 10, rhythm: 8, baseId: "bold" }),
     label: "confident character",
   },
   {
-    pattern: /最后一笔|收尾|尾巴|拉长|extend|tail|flourish|underline/i,
+    pattern: /extend|tail|flourish|underline/i,
     apply: () => ({ fluidity: 8, size: 0.05, slant: 3 }),
     label: "extended flourish",
   },
@@ -130,7 +129,7 @@ function applyDeltas(
   };
 }
 
-/** Rule-based NL parser — works offline, bilingual EN/ZH. */
+/** Rule-based NL parser — works offline, English keywords. */
 export function tuneFromRules(
   instruction: string,
   settings: SignatureSettings,
