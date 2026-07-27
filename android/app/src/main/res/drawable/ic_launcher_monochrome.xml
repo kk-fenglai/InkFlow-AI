@@ -1,23 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Faceted fountain-pen nib, tilted into writing posture, finishing a sharp
-     calligraphic swash. All content sits inside the 66dp adaptive-icon safe
-     circle so no mask shape clips it. -->
+<!-- Single-alpha version of the launcher art for Android 13+ themed icons. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Gold swash: steep entry, razor-thin pointed ends, upward finish -->
     <path
-        android:fillColor="#775A19"
+        android:fillColor="#FFFFFF"
         android:pathData="M32,77.5 C41,68.5 51,72.5 59,73 C67,73.5 73,68.5 79,59 C77,68 70,75.5 60,76.8 C50,78 39,75.5 32,77.5 Z" />
-    <!-- Angular nib leaning at writing angle, slit and breather hole punched out -->
     <group
         android:rotation="28"
         android:pivotX="54"
         android:pivotY="72">
         <path
-            android:fillColor="#1D1C16"
+            android:fillColor="#FFFFFF"
             android:fillType="evenOdd"
             android:pathData="M54,72 L45.8,49.5 C44.9,47 44.5,45 44.5,42.8 L44.5,38.2 L48.6,33.5 L59.4,33.5 L63.5,38.2 L63.5,42.8 C63.5,45 63.1,47 62.2,49.5 L54,72 Z M53.4,67 L54.6,67 L54.6,50 L53.4,50 Z M54,44.4 C55.45,44.4 56.6,45.55 56.6,47 C56.6,48.45 55.45,49.6 54,49.6 C52.55,49.6 51.4,48.45 51.4,47 C51.4,45.55 52.55,44.4 54,44.4 Z" />
     </group>

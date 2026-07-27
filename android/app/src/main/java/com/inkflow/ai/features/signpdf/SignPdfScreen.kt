@@ -173,18 +173,23 @@ fun SignPdfScreen(
     LaunchedEffect(selectedSig) {
         sigBitmap = selectedSig?.let { sig ->
             val assets = context.assets
-            val base = SignatureBases.find(sig.strokeData.baseId)
             withContext(Dispatchers.Default) {
-                renderSignatureFontBitmap(
-                    assets = assets,
-                    text = sig.strokeData.text,
-                    fontFamily = base.fontFamily,
-                    slantDeg = sig.strokeData.settings.slant ?: base.slant,
-                    sizeMul = sig.strokeData.settings.size ?: base.size,
-                    inkColorHex = sig.strokeData.settings.inkColor,
-                    width = 600,
-                    height = 240,
-                )
+                // Photo-captured signatures already carry their transparent PNG.
+                com.inkflow.ai.core.ShowcaseBackgrounds
+                    .resolveBackgroundBitmap(sig.strokeData.capturedImage)
+                    ?: run {
+                        val base = SignatureBases.find(sig.strokeData.baseId)
+                        renderSignatureFontBitmap(
+                            assets = assets,
+                            text = sig.strokeData.text,
+                            fontFamily = base.fontFamily,
+                            slantDeg = sig.strokeData.settings.slant ?: base.slant,
+                            sizeMul = sig.strokeData.settings.size ?: base.size,
+                            inkColorHex = sig.strokeData.settings.inkColor,
+                            width = 600,
+                            height = 240,
+                        )
+                    }
             }
         }
     }
@@ -409,15 +414,37 @@ fun SignPdfScreen(
                                     .clickable { selectedSig = sig },
                             ) {
                                 Column(Modifier.padding(10.dp)) {
-                                    val sigBase = SignatureBases.find(sig.strokeData.baseId)
-                                    SignatureFontArt(
-                                        text = sig.strokeData.text,
-                                        fontFamily = sigBase.fontFamily,
-                                        slantDeg = sig.strokeData.settings.slant ?: sigBase.slant,
-                                        sizeMul = sig.strokeData.settings.size ?: sigBase.size,
-                                        inkColorHex = sig.strokeData.settings.inkColor,
-                                        heightDp = 56,
-                                    )
+                                    val captured = remember(sig.id) {
+                                        com.inkflow.ai.core.ShowcaseBackgrounds
+                                            .resolveBackgroundBitmap(sig.strokeData.capturedImage)
+                                    }
+                                    if (captured != null) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(56.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(DesignTokens.SurfaceContainerLow),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Image(
+                                                bitmap = captured.asImageBitmap(),
+                                                contentDescription = sig.name,
+                                                contentScale = ContentScale.Fit,
+                                                modifier = Modifier.fillMaxSize().padding(4.dp),
+                                            )
+                                        }
+                                    } else {
+                                        val sigBase = SignatureBases.find(sig.strokeData.baseId)
+                                        SignatureFontArt(
+                                            text = sig.strokeData.text,
+                                            fontFamily = sigBase.fontFamily,
+                                            slantDeg = sig.strokeData.settings.slant ?: sigBase.slant,
+                                            sizeMul = sig.strokeData.settings.size ?: sigBase.size,
+                                            inkColorHex = sig.strokeData.settings.inkColor,
+                                            heightDp = 56,
+                                        )
+                                    }
                                     Spacer(Modifier.height(6.dp))
                                     Text(
                                         sig.name,

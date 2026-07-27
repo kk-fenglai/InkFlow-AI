@@ -39,6 +39,7 @@ import com.inkflow.ai.core.SignPdfState
 import com.inkflow.ai.core.StudioState
 import com.inkflow.ai.features.account.AccountScreen
 import com.inkflow.ai.features.auth.ForgotPasswordScreen
+import com.inkflow.ai.features.capture.CaptureScreen
 import com.inkflow.ai.features.auth.LoginScreen
 import com.inkflow.ai.features.auth.RegisterScreen
 import com.inkflow.ai.features.library.LibraryScreen
@@ -54,6 +55,7 @@ private object Routes {
     const val Library = "library"
     const val SignPdf = "sign"
     const val Account = "account"
+    const val Capture = "capture"
 }
 
 private data class Tab(val route: String, val label: String, val icon: ImageVector)
@@ -151,7 +153,17 @@ fun RootNav(
                 )
             }
             composable(Routes.Library) {
-                LibraryScreen(apiClient = apiClient)
+                LibraryScreen(
+                    apiClient = apiClient,
+                    onExtract = { nav.navigate(Routes.Capture) },
+                )
+            }
+            composable(Routes.Capture) {
+                CaptureScreen(
+                    authStore = authStore,
+                    apiClient = apiClient,
+                    onBack = { nav.popBackStack() },
+                )
             }
             composable(Routes.SignPdf) {
                 SignPdfScreen(
