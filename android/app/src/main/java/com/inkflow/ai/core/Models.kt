@@ -52,6 +52,9 @@ data class SignatureSettingsDto(
     val slant: Double? = null,
     val size: Double? = null,
     val inkColor: String? = null,
+    val backgroundImage: String? = null,
+    val backgroundOpacity: Double? = null,
+    val backgroundFit: String? = null,
 )
 
 data class StrokeDataDto(

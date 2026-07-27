@@ -53,7 +53,7 @@ val CREDIT_USAGE_ROWS: List<UsageRow> = listOf(
     UsageRow("Save to cloud (free templates)", 0, free = true),
     UsageRow("Save to cloud (premium templates)", 1, free = false),
     UsageRow("Premium template unlock (permanent)", 1, free = false),
-    UsageRow("Sign PDF (SES — Simple E-Signature)", 1, free = false),
+    UsageRow("Sign PDF", 1, free = false),
     UsageRow("Live preview & watermarked export", 0, free = true),
     UsageRow("10 free signature templates", 0, free = true),
 )
