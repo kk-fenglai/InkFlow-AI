@@ -37,8 +37,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.ChevronLeft
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.UploadFile
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -125,7 +123,6 @@ fun SignPdfScreen(
     var fracX by state::fracX
     var fracY by state::fracY
     var widthFrac by state::widthFrac
-    var sesAccepted by state::sesAccepted
 
     var signedBytes by state::signedBytes
     var signedName by state::signedName
@@ -461,23 +458,6 @@ fun SignPdfScreen(
                     ),
                 )
 
-                Spacer(Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = sesAccepted,
-                        onCheckedChange = { sesAccepted = it },
-                        colors = CheckboxDefaults.colors(
-                            checkedColor = DesignTokens.Ink,
-                            uncheckedColor = DesignTokens.Outline,
-                        ),
-                    )
-                    Text(
-                        "I accept the Simple Electronic Signature (SES) disclaimer.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = DesignTokens.OnSurfaceVariant,
-                    )
-                }
-
                 authStore.user?.let {
                     Spacer(Modifier.height(6.dp))
                     InkChip("${it.credits} credits available")
@@ -487,7 +467,7 @@ fun SignPdfScreen(
                 InkPrimaryButton(
                     text = "Sign PDF (1 Credit)",
                     loading = signing,
-                    enabled = sigBitmap != null && sesAccepted,
+                    enabled = sigBitmap != null,
                     onClick = {
                         val bytes = pdfBytes ?: return@InkPrimaryButton
                         val sig = sigBitmap ?: return@InkPrimaryButton

@@ -109,6 +109,25 @@ class ApiClient(private val tokenStore: TokenStore) {
         )
     }
 
+    /**
+     * Saves straight from the studio settings — the server builds the stroke
+     * payload and charges the 1-credit cloud-save fee. No paid generate needed.
+     */
+    suspend fun saveSignatureFromSettings(
+        name: String,
+        settings: SignatureSettingsDto,
+        canvasWidth: Int,
+        canvasHeight: Int,
+    ): SaveSignatureResponse = post(
+        "/api/signatures",
+        mapOf(
+            "name" to name,
+            "settings" to gson.toJsonTree(settings),
+            "canvasWidth" to canvasWidth,
+            "canvasHeight" to canvasHeight,
+        ),
+    )
+
     suspend fun deleteSignature(id: String) {
         delete<OkResponse>("/api/signatures/$id")
     }

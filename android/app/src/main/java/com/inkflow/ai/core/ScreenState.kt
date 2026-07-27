@@ -29,10 +29,33 @@ class StudioState {
     /** Guards the one-shot unlock fetch against refiring on every tab return. */
     var unlocksLoaded = false
 
-    var strokeData by mutableStateOf<StrokeDataDto?>(null)
-    var shareBitmap by mutableStateOf<Bitmap?>(null)
     var message by mutableStateOf<String?>(null)
     var error by mutableStateOf<String?>(null)
+
+    // Showcase background — mirrors the website's optional export background.
+    var backgroundEnabled by mutableStateOf(false)
+    /** Preset id, or "custom" for an uploaded image; null = none. */
+    var backgroundSelection by mutableStateOf<String?>(null)
+    var backgroundCustomBitmap by mutableStateOf<Bitmap?>(null)
+    var backgroundCustomDataUrl by mutableStateOf<String?>(null)
+    var backgroundOpacity by mutableFloatStateOf(100f)
+    var backgroundFit by mutableStateOf("cover")
+
+    /** Resolved background artwork for rendering, or null when disabled/none. */
+    val backgroundBitmap: Bitmap?
+        get() = when {
+            !backgroundEnabled -> null
+            backgroundSelection == "custom" -> backgroundCustomBitmap
+            else -> ShowcaseBackgrounds.find(backgroundSelection)?.bitmap()
+        }
+
+    /** Data URL persisted with the signature so the web renders the same background. */
+    val backgroundDataUrl: String?
+        get() = when {
+            !backgroundEnabled -> null
+            backgroundSelection == "custom" -> backgroundCustomDataUrl
+            else -> ShowcaseBackgrounds.find(backgroundSelection)?.dataUrl
+        }
 
     fun applyBase(id: String) {
         val base = SignatureBases.find(id)
@@ -62,7 +85,6 @@ class SignPdfState {
     var fracX by mutableFloatStateOf(0.55f)
     var fracY by mutableFloatStateOf(0.78f)
     var widthFrac by mutableFloatStateOf(0.35f)
-    var sesAccepted by mutableStateOf(false)
 
     var signedBytes by mutableStateOf<ByteArray?>(null)
     var signedName by mutableStateOf("signed.pdf")

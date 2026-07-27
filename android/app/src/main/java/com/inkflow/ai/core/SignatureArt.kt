@@ -74,7 +74,7 @@ private fun drawSignature(
     canvas.drawText(name, width / 2f, baseline, paint)
 }
 
-/** Transparent PNG of the signature for Save/Share. */
+/** PNG of the signature for Save/Share — transparent unless a showcase background is set. */
 fun renderSignatureFontBitmap(
     assets: AssetManager,
     text: String,
@@ -84,10 +84,16 @@ fun renderSignatureFontBitmap(
     inkColorHex: String?,
     width: Int = 800,
     height: Int = 320,
+    background: Bitmap? = null,
+    backgroundOpacity: Int = 100,
+    backgroundFit: String = "cover",
 ): Bitmap {
     val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
     val canvas = AndroidCanvas(bitmap)
     canvas.drawColor(AndroidColor.TRANSPARENT)
+    background?.let {
+        drawShowcaseBackground(canvas, width, height, it, backgroundFit, backgroundOpacity)
+    }
     drawSignature(
         canvas = canvas,
         width = width,
@@ -111,6 +117,9 @@ fun SignatureFontArt(
     inkColorHex: String?,
     modifier: Modifier = Modifier,
     heightDp: Int = 140,
+    backgroundBitmap: Bitmap? = null,
+    backgroundOpacity: Int = 100,
+    backgroundFit: String = "cover",
 ) {
     val assets = LocalContext.current.assets
     val typeface = remember(fontFamily) { loadTypeface(assets, fontFamily) }
@@ -123,6 +132,16 @@ fun SignatureFontArt(
             .background(DesignTokens.SurfaceContainerLow),
     ) {
         drawIntoCanvas { c ->
+            backgroundBitmap?.let {
+                drawShowcaseBackground(
+                    canvas = c.nativeCanvas,
+                    width = size.width.toInt(),
+                    height = size.height.toInt(),
+                    image = it,
+                    fit = backgroundFit,
+                    opacity = backgroundOpacity,
+                )
+            }
             drawSignature(
                 canvas = c.nativeCanvas,
                 width = size.width.toInt(),

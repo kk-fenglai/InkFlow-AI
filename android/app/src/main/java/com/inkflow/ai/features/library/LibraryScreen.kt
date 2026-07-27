@@ -52,6 +52,7 @@ import com.inkflow.ai.core.ApiClient
 import com.inkflow.ai.core.CloudDocumentDto
 import com.inkflow.ai.core.DesignTokens
 import com.inkflow.ai.core.SavedSignatureDto
+import com.inkflow.ai.core.ShowcaseBackgrounds
 import com.inkflow.ai.core.SignatureBases
 import com.inkflow.ai.core.SignatureFontArt
 import com.inkflow.ai.core.renderPdfPage
@@ -196,13 +197,20 @@ private fun SignaturesTab(apiClient: ApiClient) {
                             }
                             Spacer(Modifier.height(8.dp))
                             val base = SignatureBases.find(item.strokeData.baseId)
+                            val settings = item.strokeData.settings
+                            val bg = remember(item.id) {
+                                ShowcaseBackgrounds.resolveBackgroundBitmap(settings.backgroundImage)
+                            }
                             SignatureFontArt(
                                 text = item.strokeData.text,
                                 fontFamily = base.fontFamily,
-                                slantDeg = item.strokeData.settings.slant ?: base.slant,
-                                sizeMul = item.strokeData.settings.size ?: base.size,
-                                inkColorHex = item.strokeData.settings.inkColor,
+                                slantDeg = settings.slant ?: base.slant,
+                                sizeMul = settings.size ?: base.size,
+                                inkColorHex = settings.inkColor,
                                 heightDp = 80,
+                                backgroundBitmap = bg,
+                                backgroundOpacity = (settings.backgroundOpacity ?: 100.0).toInt(),
+                                backgroundFit = settings.backgroundFit ?: "cover",
                             )
                         }
                     }
