@@ -66,6 +66,10 @@ data class StrokeDataDto(
     val strokes: List<SignatureStrokeDto>,
     val settings: SignatureSettingsDto,
     val createdAt: String? = null,
+    /** "captured" entries hold a photographed signature instead of vector strokes. */
+    val kind: String? = null,
+    /** Transparent PNG data URL for captured signatures. */
+    val capturedImage: String? = null,
 )
 
 data class GenerateResponse(

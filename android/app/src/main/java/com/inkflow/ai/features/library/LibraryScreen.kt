@@ -67,7 +67,7 @@ import java.io.File
 private enum class LibraryTab { SIGNATURES, DOCUMENTS }
 
 @Composable
-fun LibraryScreen(apiClient: ApiClient) {
+fun LibraryScreen(apiClient: ApiClient, onExtract: () -> Unit = {}) {
     var tab by remember { mutableStateOf(LibraryTab.SIGNATURES) }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -88,7 +88,7 @@ fun LibraryScreen(apiClient: ApiClient) {
         }
 
         when (tab) {
-            LibraryTab.SIGNATURES -> SignaturesTab(apiClient)
+            LibraryTab.SIGNATURES -> SignaturesTab(apiClient, onExtract)
             LibraryTab.DOCUMENTS -> DocumentsTab(apiClient)
         }
     }
@@ -123,7 +123,7 @@ private fun LibraryTabs(selected: LibraryTab, onSelect: (LibraryTab) -> Unit) {
 }
 
 @Composable
-private fun SignaturesTab(apiClient: ApiClient) {
+private fun SignaturesTab(apiClient: ApiClient, onExtract: () -> Unit) {
     var items by remember { mutableStateOf<List<SavedSignatureDto>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -142,6 +142,13 @@ private fun SignaturesTab(apiClient: ApiClient) {
     }
 
     Column(Modifier.fillMaxSize()) {
+        InkOutlinedButton(
+            text = "Extract from Photo",
+            onClick = onExtract,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, bottom = 12.dp),
+        )
         when {
             loading && items.isEmpty() -> LoadingBox()
             items.isEmpty() -> {
@@ -196,22 +203,47 @@ private fun SignaturesTab(apiClient: ApiClient) {
                                 }
                             }
                             Spacer(Modifier.height(8.dp))
-                            val base = SignatureBases.find(item.strokeData.baseId)
-                            val settings = item.strokeData.settings
-                            val bg = remember(item.id) {
-                                ShowcaseBackgrounds.resolveBackgroundBitmap(settings.backgroundImage)
+                            val captured = remember(item.id) {
+                                ShowcaseBackgrounds.resolveBackgroundBitmap(
+                                    item.strokeData.capturedImage,
+                                )
                             }
-                            SignatureFontArt(
-                                text = item.strokeData.text,
-                                fontFamily = base.fontFamily,
-                                slantDeg = settings.slant ?: base.slant,
-                                sizeMul = settings.size ?: base.size,
-                                inkColorHex = settings.inkColor,
-                                heightDp = 80,
-                                backgroundBitmap = bg,
-                                backgroundOpacity = (settings.backgroundOpacity ?: 100.0).toInt(),
-                                backgroundFit = settings.backgroundFit ?: "cover",
-                            )
+                            if (captured != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(80.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(DesignTokens.SurfaceContainerLow),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Image(
+                                        bitmap = captured.asImageBitmap(),
+                                        contentDescription = item.name,
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier.fillMaxSize().padding(6.dp),
+                                    )
+                                }
+                            } else {
+                                val base = SignatureBases.find(item.strokeData.baseId)
+                                val settings = item.strokeData.settings
+                                val bg = remember(item.id) {
+                                    ShowcaseBackgrounds.resolveBackgroundBitmap(
+                                        settings.backgroundImage,
+                                    )
+                                }
+                                SignatureFontArt(
+                                    text = item.strokeData.text,
+                                    fontFamily = base.fontFamily,
+                                    slantDeg = settings.slant ?: base.slant,
+                                    sizeMul = settings.size ?: base.size,
+                                    inkColorHex = settings.inkColor,
+                                    heightDp = 80,
+                                    backgroundBitmap = bg,
+                                    backgroundOpacity = (settings.backgroundOpacity ?: 100.0).toInt(),
+                                    backgroundFit = settings.backgroundFit ?: "cover",
+                                )
+                            }
                         }
                     }
                 }

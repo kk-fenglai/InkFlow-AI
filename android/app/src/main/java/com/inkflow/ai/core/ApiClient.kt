@@ -128,6 +128,23 @@ class ApiClient(private val tokenStore: TokenStore) {
         ),
     )
 
+    /** Stores a photo-extracted transparent PNG in the cloud library (1 credit). */
+    suspend fun saveCapturedSignature(
+        name: String,
+        capturedImage: String,
+        canvasWidth: Int,
+        canvasHeight: Int,
+    ): SaveSignatureResponse = post(
+        "/api/signatures",
+        mapOf(
+            "name" to name,
+            "kind" to "captured",
+            "capturedImage" to capturedImage,
+            "canvasWidth" to canvasWidth,
+            "canvasHeight" to canvasHeight,
+        ),
+    )
+
     suspend fun deleteSignature(id: String) {
         delete<OkResponse>("/api/signatures/$id")
     }
