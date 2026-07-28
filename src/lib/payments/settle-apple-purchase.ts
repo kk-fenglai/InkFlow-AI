@@ -1,7 +1,7 @@
-import { addCredits } from "@/lib/credits";
+import { addCreditsWithin } from "@/lib/credits";
 import { prisma } from "@/lib/prisma";
 import { findAppleProduct } from "@/lib/apple/products";
-import { applySubscriptionPeriod } from "@/lib/billing/subscription";
+import { applySubscriptionPeriodWithin } from "@/lib/billing/subscription";
 
 export type AppleSettleResult =
   | { ok: true; purchaseId: string; credits: number }
@@ -46,22 +46,31 @@ export async function settleAppleCreditPurchase(input: {
         status: "pending",
       },
     });
+  } else if (purchase.userId !== input.userId) {
+    // The transaction was already claimed by another account; never re-point the grant.
+    return { ok: false, reason: "owned_by_other_user" };
   }
 
-  const claim = await prisma.creditPurchase.updateMany({
-    where: { id: purchase.id, status: "pending" },
-    data: { status: "completed", paidAt: new Date() },
+  const owner = purchase.userId;
+  const claimed = await prisma.$transaction(async (tx) => {
+    const claim = await tx.creditPurchase.updateMany({
+      where: { id: purchase.id, status: "pending" },
+      data: { status: "completed", paidAt: new Date() },
+    });
+    if (claim.count === 0) return false;
+
+    await addCreditsWithin(
+      tx,
+      owner,
+      product.credits,
+      `apple_purchase_${purchase.id}`,
+    );
+    return true;
   });
 
-  if (claim.count === 0) {
+  if (!claimed) {
     return { ok: false, reason: "already_completed" };
   }
-
-  await addCredits(
-    input.userId,
-    product.credits,
-    `apple_purchase_${purchase.id}`,
-  );
 
   return { ok: true, purchaseId: purchase.id, credits: product.credits };
 }
@@ -110,6 +119,8 @@ export async function settleAppleSubscription(input: {
         status: "pending",
       },
     });
+  } else if (purchase.userId !== input.userId) {
+    return { ok: false, reason: "owned_by_other_user" };
   } else if (!purchase.appleOriginalTransactionId) {
     await prisma.creditPurchase.update({
       where: { id: purchase.id },
@@ -117,21 +128,26 @@ export async function settleAppleSubscription(input: {
     });
   }
 
-  const claim = await prisma.creditPurchase.updateMany({
-    where: { id: purchase.id, status: "pending" },
-    data: { status: "completed", paidAt: new Date() },
+  const owner = purchase.userId;
+  const claimed = await prisma.$transaction(async (tx) => {
+    const claim = await tx.creditPurchase.updateMany({
+      where: { id: purchase.id, status: "pending" },
+      data: { status: "completed", paidAt: new Date() },
+    });
+    if (claim.count === 0) return false;
+
+    await applySubscriptionPeriodWithin(tx, {
+      userId: owner,
+      sourcePurchaseId: purchase.id,
+      credits: product.credits,
+      plan: "pro",
+    });
+    return true;
   });
 
-  if (claim.count === 0) {
+  if (!claimed) {
     return { ok: false, reason: "already_completed" };
   }
-
-  await applySubscriptionPeriod({
-    userId: input.userId,
-    sourcePurchaseId: purchase.id,
-    credits: product.credits,
-    plan: "pro",
-  });
 
   return { ok: true, purchaseId: purchase.id, credits: product.credits };
 }

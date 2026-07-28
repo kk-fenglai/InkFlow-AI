@@ -82,11 +82,14 @@ export async function verifyGooglePlayPurchase(input: {
         token: purchaseToken,
       });
       const data = res.data;
+      // 0 = pending, 1 = received, 2 = free trial, 3 = pending deferred upgrade.
+      // Anything else (including a missing field) is not a paid, usable state.
       if (data.paymentState !== 1 && data.paymentState !== 2) {
-        // 1 = received, 2 = free trial / pending deferred — accept received
-        if (data.paymentState !== undefined && data.paymentState === 0) {
-          return { error: "payment_pending" };
-        }
+        return { error: "payment_pending" };
+      }
+      const expiry = Number(data.expiryTimeMillis ?? 0);
+      if (!expiry || expiry <= Date.now()) {
+        return { error: "subscription_expired" };
       }
       return {
         productId: input.productId,

@@ -39,8 +39,15 @@ export async function POST(req: Request) {
     );
   }
 
-  let transactionId = body.transactionId?.trim() ?? "";
-  let productId = body.productId?.trim() ?? "";
+  // Unsigned transactionId + productId is only trusted in dev, behind the same
+  // flag that disables JWS verification. Otherwise credits could be minted by
+  // posting an arbitrary product id.
+  const allowUnsigned =
+    process.env.APPLE_IAP_SKIP_VERIFY === "true" &&
+    process.env.NODE_ENV !== "production";
+
+  let transactionId = allowUnsigned ? (body.transactionId?.trim() ?? "") : "";
+  let productId = allowUnsigned ? (body.productId?.trim() ?? "") : "";
 
   if (body.signedTransaction?.trim()) {
     const parsed = await parseAppleSignedTransaction(body.signedTransaction.trim());
@@ -59,7 +66,7 @@ export async function POST(req: Request) {
     return jsonWithMobileCors(
       req,
       {
-        error: "signedTransaction or transactionId + productId required.",
+        error: "signedTransaction required.",
         code: "VALIDATION",
       },
       { status: 400 },

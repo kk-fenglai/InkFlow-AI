@@ -50,6 +50,62 @@ async function resolveInvoicePaymentIntentId(
   return invoicePaymentIntentId(full);
 }
 
+/**
+ * Stripe does not guarantee event order, so invoice.paid can arrive before the
+ * checkout.session.completed that normally creates the contract. Rebuild it
+ * from the subscription's metadata rather than dropping a paid invoice.
+ */
+async function ensureContractForSubscription(subscriptionId: string) {
+  const existing = await prisma.payContract.findUnique({
+    where: { stripeSubscriptionId: subscriptionId },
+  });
+  if (existing) return existing;
+
+  const stripe = getStripe();
+  if (!stripe) return null;
+
+  let subscription: Stripe.Subscription;
+  try {
+    subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  } catch {
+    return null;
+  }
+
+  const userId = subscription.metadata?.userId;
+  if (!userId) return null;
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true },
+  });
+  if (!user) return null;
+
+  const customerId =
+    typeof subscription.customer === "string"
+      ? subscription.customer
+      : subscription.customer?.id ?? null;
+
+  try {
+    return await prisma.payContract.create({
+      data: {
+        userId: user.id,
+        planCode: subscription.metadata?.planCode || SUBSCRIPTION_PLAN.id,
+        stripeCustomerId: customerId,
+        stripeSubscriptionId: subscriptionId,
+        status: "active",
+      },
+    });
+  } catch (e) {
+    // The checkout handler may have won the race in the meantime.
+    if ((e as { code?: string }).code === "P2002") {
+      return prisma.payContract.findUnique({
+        where: { stripeSubscriptionId: subscriptionId },
+      });
+    }
+    throw e;
+  }
+}
+
 export async function handleSubscriptionCheckoutCompleted(
   session: Stripe.Checkout.Session,
 ): Promise<void> {
@@ -116,9 +172,7 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
 
   if (!subscriptionId) return;
 
-  const contract = await prisma.payContract.findUnique({
-    where: { stripeSubscriptionId: subscriptionId },
-  });
+  const contract = await ensureContractForSubscription(subscriptionId);
 
   if (!contract) return;
 
@@ -129,33 +183,53 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> 
 
   const paymentIntentId = await resolveInvoicePaymentIntentId(invoice);
 
-  try {
-    const order = await prisma.creditPurchase.create({
-      data: {
-        userId: contract.userId,
-        stripeSessionId: `inv_${invoice.id}`,
-        stripePaymentIntentId: paymentIntentId ?? null,
-        packId: SUBSCRIPTION_PLAN.id,
-        purchaseType: "subscription",
-        credits: SUBSCRIPTION_PLAN.creditsPerMonth,
-        amountCents: amountPaid,
-        currency: invoice.currency ?? CREDIT_PACK_CURRENCY,
-        status: "completed",
-        paidAt: new Date(),
-        contractId: contract.id,
-      },
-    });
+  const sessionKey = `inv_${invoice.id}`;
 
-    await applySubscriptionPeriod({
-      userId: contract.userId,
-      sourcePurchaseId: order.id,
-      contractId: contract.id,
-    });
-  } catch (e) {
-    const err = e as { code?: string };
-    if (err.code === "P2002") return;
-    throw e;
+  let order = await prisma.creditPurchase.findUnique({
+    where: { stripeSessionId: sessionKey },
+  });
+
+  if (!order) {
+    try {
+      order = await prisma.creditPurchase.create({
+        data: {
+          userId: contract.userId,
+          stripeSessionId: sessionKey,
+          stripePaymentIntentId: paymentIntentId ?? null,
+          packId: SUBSCRIPTION_PLAN.id,
+          purchaseType: "subscription",
+          credits: SUBSCRIPTION_PLAN.creditsPerMonth,
+          amountCents: amountPaid,
+          currency: invoice.currency ?? CREDIT_PACK_CURRENCY,
+          status: "completed",
+          paidAt: new Date(),
+          contractId: contract.id,
+        },
+      });
+    } catch (e) {
+      if ((e as { code?: string }).code !== "P2002") throw e;
+      order = await prisma.creditPurchase.findUnique({
+        where: { stripeSessionId: sessionKey },
+      });
+    }
   }
+
+  if (!order) return;
+
+  // The order row existing is not proof the period was granted — an earlier
+  // delivery could have died between the two. Gate on the grant itself so a
+  // Stripe retry finishes the job instead of reporting success.
+  const alreadyGranted = await prisma.subscriptionRecord.findFirst({
+    where: { sourcePurchaseId: order.id },
+    select: { id: true },
+  });
+  if (alreadyGranted) return;
+
+  await applySubscriptionPeriod({
+    userId: contract.userId,
+    sourcePurchaseId: order.id,
+    contractId: contract.id,
+  });
 }
 
 export async function handleInvoicePaymentFailed(

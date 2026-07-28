@@ -1,5 +1,5 @@
 import type Stripe from "stripe";
-import { addCredits } from "@/lib/credits";
+import { addCreditsWithin } from "@/lib/credits";
 import { prisma } from "@/lib/prisma";
 
 export type SettleResult =
@@ -52,26 +52,38 @@ export async function settleCreditPurchase(
     return { claimed: false, reason: "currency_mismatch" };
   }
 
-  const claim = await prisma.creditPurchase.updateMany({
-    where: { id: purchase.id, status: "pending" },
-    data: {
-      status: "completed",
-      paidAt: new Date(),
-      stripePaymentIntentId:
-        typeof session.payment_intent === "string"
-          ? session.payment_intent
-          : session.payment_intent?.id ?? undefined,
-    },
-  });
-
-  if (claim.count === 0) {
-    return { claimed: false, reason: "race_lost" };
-  }
-
   const credits =
     Number(session.metadata?.credits) || purchase.credits;
 
-  await addCredits(purchase.userId, credits, `stripe_purchase_${purchase.id}`);
+  // Claim and payout commit together — otherwise a failure between them leaves
+  // the row "completed" with no credits and every retry says already_completed.
+  const claimed = await prisma.$transaction(async (tx) => {
+    const claim = await tx.creditPurchase.updateMany({
+      where: { id: purchase.id, status: "pending" },
+      data: {
+        status: "completed",
+        paidAt: new Date(),
+        stripePaymentIntentId:
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : session.payment_intent?.id ?? undefined,
+      },
+    });
+
+    if (claim.count === 0) return false;
+
+    await addCreditsWithin(
+      tx,
+      purchase.userId,
+      credits,
+      `stripe_purchase_${purchase.id}`,
+    );
+    return true;
+  });
+
+  if (!claimed) {
+    return { claimed: false, reason: "race_lost" };
+  }
 
   return { claimed: true, purchaseId: purchase.id };
 }

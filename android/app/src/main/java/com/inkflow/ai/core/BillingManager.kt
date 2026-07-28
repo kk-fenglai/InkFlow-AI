@@ -7,6 +7,7 @@ import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingFlowParams
 import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.ConsumeParams
 import com.android.billingclient.api.PendingPurchasesParams
 import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
@@ -14,6 +15,7 @@ import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.QueryPurchasesParams
 import com.android.billingclient.api.acknowledgePurchase
+import com.android.billingclient.api.consumePurchase
 import com.android.billingclient.api.queryProductDetails
 import com.android.billingclient.api.queryPurchasesAsync
 import kotlinx.coroutines.CoroutineScope
@@ -193,7 +195,15 @@ class BillingManager(
         return try {
             val res = api.verifyGooglePurchase(productId, purchase.purchaseToken, type)
             if (res.ok || res.reason == "already_completed") {
-                if (!purchase.isAcknowledged) {
+                if (type == "inapp") {
+                    // Credit packs are consumables: consuming (which also acknowledges)
+                    // is what makes the pack buyable again.
+                    billingClient.consumePurchase(
+                        ConsumeParams.newBuilder()
+                            .setPurchaseToken(purchase.purchaseToken)
+                            .build(),
+                    )
+                } else if (!purchase.isAcknowledged) {
                     billingClient.acknowledgePurchase(
                         AcknowledgePurchaseParams.newBuilder()
                             .setPurchaseToken(purchase.purchaseToken)

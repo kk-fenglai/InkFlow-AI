@@ -33,6 +33,14 @@ export async function refundPurchase(input: {
     return { ok: false, error: "Stripe not configured." };
   }
 
+  const paymentIntentId = purchase.stripePaymentIntentId;
+  if (!paymentIntentId?.startsWith("pi_")) {
+    return {
+      ok: false,
+      error: "No payment intent on record — cannot refund via Stripe.",
+    };
+  }
+
   const refundRecord = await prisma.refundOrder.create({
     data: {
       purchaseId: purchase.id,
@@ -46,20 +54,15 @@ export async function refundPurchase(input: {
   let stripeRefundId: string | null = null;
 
   try {
-    const pi = purchase.stripePaymentIntentId;
-    if (pi?.startsWith("pi_")) {
-      const refund = await stripe.refunds.create({
-        payment_intent: pi,
-        amount: amountCents,
-        metadata: {
-          purchaseId: purchase.id,
-          refundOrderId: refundRecord.id,
-        },
-      });
-      stripeRefundId = refund.id;
-    } else {
-      return { ok: false, error: "No payment intent on record — cannot refund via Stripe." };
-    }
+    const refund = await stripe.refunds.create({
+      payment_intent: paymentIntentId,
+      amount: amountCents,
+      metadata: {
+        purchaseId: purchase.id,
+        refundOrderId: refundRecord.id,
+      },
+    });
+    stripeRefundId = refund.id;
   } catch (e) {
     await prisma.refundOrder.update({
       where: { id: refundRecord.id },
@@ -70,8 +73,21 @@ export async function refundPurchase(input: {
   }
 
   const fullRefund = amountCents >= remaining;
+
+  // On a final refund, claw back only what earlier partial refunds left behind,
+  // otherwise the full grant is deducted a second time.
+  const prior = await prisma.refundOrder.aggregate({
+    where: {
+      purchaseId: purchase.id,
+      status: "succeeded",
+      id: { not: refundRecord.id },
+    },
+    _sum: { creditsClawedBack: true },
+  });
+  const alreadyClawedBack = prior._sum.creditsClawedBack ?? 0;
+
   const creditsClawBack = fullRefund
-    ? purchase.credits
+    ? Math.max(0, purchase.credits - alreadyClawedBack)
     : Math.round(purchase.credits * (amountCents / purchase.amountCents));
 
   await prisma.refundOrder.update({
@@ -94,6 +110,8 @@ export async function refundPurchase(input: {
   await revokeSubscriptionPurchase({
     purchaseId: purchase.id,
     creditsToClawBack: creditsClawBack,
+    // A partial refund should not wipe out the whole paid period.
+    revokePeriod: fullRefund,
   });
 
   return { ok: true, refundId: refundRecord.id };

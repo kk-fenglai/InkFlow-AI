@@ -1,4 +1,5 @@
-import { addCredits, deductCredits } from "@/lib/credits";
+import type { Prisma } from "@prisma/client";
+import { deductCredits } from "@/lib/credits";
 import { prisma } from "@/lib/prisma";
 import { SUBSCRIPTION_PLAN } from "@/lib/constants";
 
@@ -21,7 +22,39 @@ export async function applySubscriptionPeriod(input: {
   const credits = input.credits ?? SUBSCRIPTION_PLAN.creditsPerMonth;
   const months = input.months ?? 1;
 
-  const user = await prisma.user.findUnique({
+  await prisma.$transaction((tx) => applyWithin(tx, input, plan, credits, months));
+}
+
+/** Same grant, but joining a caller's transaction so the purchase claim and the
+ *  grant commit together. */
+export async function applySubscriptionPeriodWithin(
+  tx: Prisma.TransactionClient,
+  input: {
+    userId: string;
+    plan?: string;
+    credits?: number;
+    months?: number;
+    sourcePurchaseId?: string;
+    contractId?: string;
+  },
+): Promise<void> {
+  return applyWithin(
+    tx,
+    input,
+    input.plan ?? SUBSCRIPTION_PLAN.plan,
+    input.credits ?? SUBSCRIPTION_PLAN.creditsPerMonth,
+    input.months ?? 1,
+  );
+}
+
+async function applyWithin(
+  tx: Prisma.TransactionClient,
+  input: { userId: string; sourcePurchaseId?: string; contractId?: string },
+  plan: string,
+  credits: number,
+  months: number,
+): Promise<void> {
+  const user = await tx.user.findUnique({
     where: { id: input.userId },
     select: { subscriptionEnd: true },
   });
@@ -32,23 +65,26 @@ export async function applySubscriptionPeriod(input: {
   const base = active ? user.subscriptionEnd! : now;
   const periodEnd = addPeriodDays(base, months);
 
-  await prisma.user.update({
+  await tx.user.update({
     where: { id: input.userId },
     data: {
       plan,
       subscriptionEnd: periodEnd,
+      ...(credits > 0 ? { credits: { increment: credits } } : {}),
     },
   });
 
   if (credits > 0) {
-    await addCredits(
-      input.userId,
-      credits,
-      `subscription_${input.sourcePurchaseId ?? "period"}`,
-    );
+    await tx.creditTransaction.create({
+      data: {
+        userId: input.userId,
+        amount: credits,
+        reason: `subscription_${input.sourcePurchaseId ?? "period"}`,
+      },
+    });
   }
 
-  await prisma.subscriptionRecord.create({
+  await tx.subscriptionRecord.create({
     data: {
       userId: input.userId,
       plan,
@@ -60,7 +96,7 @@ export async function applySubscriptionPeriod(input: {
   });
 
   if (input.contractId) {
-    await prisma.payContract.updateMany({
+    await tx.payContract.updateMany({
       where: { id: input.contractId, userId: input.userId },
       data: {
         lastChargeAt: now,
@@ -76,6 +112,7 @@ export async function applySubscriptionPeriod(input: {
 export async function revokeSubscriptionPurchase(input: {
   purchaseId: string;
   creditsToClawBack: number;
+  revokePeriod?: boolean;
 }): Promise<void> {
   const purchase = await prisma.creditPurchase.findUnique({
     where: { id: input.purchaseId },
@@ -98,7 +135,7 @@ export async function revokeSubscriptionPurchase(input: {
     }
   }
 
-  if (purchase.purchaseType === "subscription") {
+  if (purchase.purchaseType === "subscription" && input.revokePeriod !== false) {
     const user = await prisma.user.findUnique({
       where: { id: purchase.userId },
       select: { subscriptionEnd: true },
