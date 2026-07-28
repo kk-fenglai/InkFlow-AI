@@ -64,6 +64,7 @@ export default function PdfSignaturePlacer({
   const [pageHeight, setPageHeight] = useState(792);
   const [displaySize, setDisplaySize] = useState({ width: 0, height: 0 });
   const [rendering, setRendering] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const dragRef = useRef<{
     startX: number;
@@ -186,14 +187,20 @@ export default function PdfSignaturePlacer({
     let cancelled = false;
     pdfRef.current = null;
 
+    setLoadError(null);
     void (async () => {
-      const pdfjs = await loadPdfJs();
-      if (cancelled) return;
-      const bytes = Uint8Array.from(atob(pdfBase64), (c) => c.charCodeAt(0));
-      const pdf = await pdfjs.getDocument({ data: bytes }).promise;
-      if (cancelled) return;
-      pdfRef.current = pdf;
-      await renderPage();
+      try {
+        const pdfjs = await loadPdfJs();
+        if (cancelled) return;
+        const bytes = Uint8Array.from(atob(pdfBase64), (c) => c.charCodeAt(0));
+        const pdf = await pdfjs.getDocument({ data: bytes }).promise;
+        if (cancelled) return;
+        pdfRef.current = pdf;
+        await renderPage();
+      } catch {
+        // Without this the viewer just stays blank on a corrupt/unreadable PDF.
+        if (!cancelled) setLoadError("Could not open this PDF. Try another file.");
+      }
     })();
 
     return () => {
@@ -428,7 +435,15 @@ export default function PdfSignaturePlacer({
           </div>
         )}
 
-        {signaturePreviewUrl && !placed && !rendering && (
+        {loadError && (
+          <div className="absolute inset-0 grid place-items-center bg-surface-container-lowest px-md">
+            <p className="font-label-sm text-label-sm text-error text-center">
+              {loadError}
+            </p>
+          </div>
+        )}
+
+        {signaturePreviewUrl && !placed && !rendering && !loadError && (
           <div className="absolute bottom-0 inset-x-0 px-md py-sm bg-on-surface/75 text-surface text-center pointer-events-none">
             <p className="font-label-sm text-label-sm">
               Click to place · drag to move · drag edges or corners to resize · scroll to scale

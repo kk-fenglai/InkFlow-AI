@@ -58,6 +58,13 @@ export default function SignSetupPage() {
 
   useEffect(() => {
     if (!selectedSig) return;
+    // Captured (photographed) signatures already hold a ready-to-use PNG;
+    // re-rendering from settings would draw a generic font instead.
+    const captured = selectedSig.strokeData.capturedImage;
+    if (captured) {
+      setSignaturePngBase64(dataUrlToBase64(captured));
+      return;
+    }
     void settingsToPngDataUrl(
       selectedSig.strokeData.settings,
       selectedSig.strokeData.width,
