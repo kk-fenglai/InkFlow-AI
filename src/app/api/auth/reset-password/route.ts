@@ -3,8 +3,21 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { validatePassword } from "@/lib/auth/password";
+import { authRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
+  const rl = authRateLimit(req, "reset-password", 10, 15 * 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      {
+        error: "Too many attempts. Try again later.",
+        code: "RATE_LIMITED",
+        retryAfterSec: rl.retryAfterSec,
+      },
+      { status: 429 },
+    );
+  }
+
   let body: { token?: string; password?: string };
   try {
     body = await req.json();
@@ -40,14 +53,22 @@ export async function POST(req: Request) {
 
   const passwordHash = await bcrypt.hash(password, 12);
 
+  const now = new Date();
+
   await prisma.$transaction([
     prisma.user.update({
       where: { id: record.userId },
       data: { passwordHash },
     }),
-    prisma.passwordResetToken.update({
-      where: { id: record.id },
-      data: { usedAt: new Date() },
+    // Burn every outstanding reset link, not just this one, and cut existing
+    // mobile sessions — a reset is how a user locks an intruder out.
+    prisma.passwordResetToken.updateMany({
+      where: { userId: record.userId, usedAt: null },
+      data: { usedAt: now },
+    }),
+    prisma.mobileRefreshToken.updateMany({
+      where: { userId: record.userId, revokedAt: null },
+      data: { revokedAt: now },
     }),
   ]);
 

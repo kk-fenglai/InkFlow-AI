@@ -75,10 +75,15 @@ export async function rotateRefreshToken(
     return null;
   }
 
-  await prisma.mobileRefreshToken.update({
-    where: { id: existing.id },
+  // Conditional revoke: two concurrent refreshes with the same token must not
+  // both succeed and spawn independent token families.
+  const claimed = await prisma.mobileRefreshToken.updateMany({
+    where: { id: existing.id, revokedAt: null },
     data: { revokedAt: new Date() },
   });
+  if (claimed.count === 0) {
+    return null;
+  }
 
   const refreshToken = await issueRefreshToken(existing.userId);
   return { userId: existing.userId, refreshToken };

@@ -6,6 +6,8 @@ import bcrypt from "bcryptjs";
 
 import { prisma } from "@/lib/prisma";
 
+import { rateLimit } from "@/lib/rate-limit";
+
 
 
 export const authOptions: NextAuthOptions = {
@@ -39,6 +41,14 @@ export const authOptions: NextAuthOptions = {
         const password = credentials?.password;
 
         if (!email || !password) return null;
+
+
+
+        // Web sign-in had no throttle at all, unlike /api/mobile/login.
+
+        const rl = rateLimit(`auth:credentials:${email}`, 10, 60_000);
+
+        if (!rl.ok) return null;
 
 
 

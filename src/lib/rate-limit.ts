@@ -1,4 +1,5 @@
 const buckets = new Map<string, { count: number; resetAt: number }>();
+const MAX_BUCKETS = 10_000;
 
 /** Lightweight in-memory rate limit (per user or IP). Resets on cold start. */
 export function rateLimit(
@@ -8,6 +9,14 @@ export function rateLimit(
 ): { ok: true } | { ok: false; retryAfterSec: number } {
   const now = Date.now();
   const entry = buckets.get(key);
+
+  // Keys that are never revisited would otherwise live for the life of the
+  // process; sweep expired ones once the map grows past a sane size.
+  if (buckets.size > MAX_BUCKETS) {
+    for (const [k, v] of buckets) {
+      if (now > v.resetAt) buckets.delete(k);
+    }
+  }
 
   if (!entry || now > entry.resetAt) {
     buckets.set(key, { count: 1, resetAt: now + windowMs });
