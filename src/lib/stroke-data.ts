@@ -105,17 +105,21 @@ export function generateStrokeData(
 
   let fontSize =
     Math.min(height * 0.55, 120) * base.defaults.size * settings.size;
-  const letterSpacing = 6 - (settings.fluidity / 100) * 10;
+  let letterSpacing = 6 - (settings.fluidity / 100) * 10;
   const jitterAmount = (1 - settings.rhythm / 100) * (fontSize * 0.12);
   const rotJitter = (1 - settings.rhythm / 100) * 0.14;
 
-  const charWidth = fontSize * 0.55;
+  let charWidth = fontSize * 0.55;
   let totalWidth = chars.length * (charWidth + letterSpacing) - letterSpacing;
   const maxWidth = width * 0.86;
   if (totalWidth > maxWidth && totalWidth > 0) {
     const scale = maxWidth / totalWidth;
     fontSize *= scale;
     totalWidth *= scale;
+    // The per-character advance has to shrink with totalWidth, or long names
+    // start centred and then run off the right edge of the canvas.
+    charWidth *= scale;
+    letterSpacing *= scale;
   }
 
   const startX = (width - totalWidth) / 2;

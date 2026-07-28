@@ -190,6 +190,12 @@ export default function StudioPage() {
   );
 
   useEffect(() => {
+    // The rendered strokeData belongs to the settings it was made from; keeping
+    // it after an edit would save the old artwork under the new name.
+    setLastStrokeData(null);
+  }, [settings]);
+
+  useEffect(() => {
     const draft = loadStudioDraftState();
     setText(draft.text);
     setBaseId(draft.baseId);
@@ -1059,7 +1065,8 @@ export default function StudioPage() {
             <button
               type="button"
               onClick={downloadSvg}
-              className="w-full border border-tertiary text-tertiary py-sm rounded-DEFAULT font-label-md text-label-md flex justify-center items-center gap-sm hover:bg-tertiary/5 transition-colors"
+              disabled={busy}
+              className="w-full border border-tertiary text-tertiary py-sm rounded-DEFAULT font-label-md text-label-md flex justify-center items-center gap-sm hover:bg-tertiary/5 transition-colors disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-[18px]">
                 shape_line

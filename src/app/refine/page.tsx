@@ -79,12 +79,19 @@ export default function RefinePage() {
       const img = new Image();
       img.onload = () => {
         setSourceImg(img);
+        // Stats are computed on a downscaled copy — a 12MP camera photo would
+        // otherwise build and sort a 12M-element luminance array on the UI thread.
+        const probeMax = 1000;
+        const probeScale = Math.min(
+          1,
+          probeMax / Math.max(img.naturalWidth, img.naturalHeight),
+        );
         const probe = document.createElement("canvas");
-        probe.width = img.naturalWidth;
-        probe.height = img.naturalHeight;
+        probe.width = Math.max(1, Math.round(img.naturalWidth * probeScale));
+        probe.height = Math.max(1, Math.round(img.naturalHeight * probeScale));
         const pctx = probe.getContext("2d");
         if (pctx) {
-          pctx.drawImage(img, 0, 0);
+          pctx.drawImage(img, 0, 0, probe.width, probe.height);
           const { data } = pctx.getImageData(0, 0, probe.width, probe.height);
           const stats = computeImageStats(data, probe.width, probe.height);
           setImageStats(stats);

@@ -41,7 +41,20 @@ export async function listUserSignatures(
     orderBy: { createdAt: "desc" },
     take: MAX_SIGNATURES_PER_USER,
   });
-  return rows.map(toClientSignature);
+  // Skip unreadable rows so one corrupt entry cannot break the whole library.
+  return rows.flatMap((row) => {
+    const strokeData = parseStrokeData(row.strokeData);
+    if (!strokeData) return [];
+    return [
+      {
+        id: row.id,
+        name: row.name,
+        strokeData,
+        savedAt: row.createdAt.toISOString(),
+        source: "cloud" as const,
+      },
+    ];
+  });
 }
 
 export async function createUserSignature(
