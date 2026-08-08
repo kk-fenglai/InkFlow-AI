@@ -7,7 +7,11 @@ function extractFamily(fontFamily: string): string {
 }
 
 const families = [
-  ...new Set(ARTIST_BASES.map((b) => extractFamily(b.fontFamily))),
+  ...new Set(
+    ARTIST_BASES.filter((b) => b.source !== "local").map((b) =>
+      extractFamily(b.fontFamily),
+    ),
+  ),
 ];
 
 /** Single deferred stylesheet — only injected on Studio routes. */

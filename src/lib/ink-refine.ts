@@ -182,34 +182,105 @@ export function processInkPixels(
 
   const smoothed = boxBlurLum(lum, width, height, strength > 0.5 ? 1 : 0);
 
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const i = (y * width + x) * 4;
-      const l = smoothed[y * width + x];
+  const n = width * height;
+  const soft = new Float32Array(n);
+  const alphaArr = new Float32Array(n);
+  for (let p = 0; p < n; p++) {
+    const l = smoothed[p];
+    let alpha = 1 - (l - (cut - ramp)) / (2 * ramp);
+    alpha = Math.max(0, Math.min(1, alpha));
+    soft[p] = alpha;
 
-      let alpha = 1 - (l - (cut - ramp)) / (2 * ramp);
-      alpha = Math.max(0, Math.min(1, alpha));
+    if (strength > 0.55 && alpha > 0.15 && alpha < 0.85) {
+      alpha = alpha > 0.5 ? 1 : 0;
+    }
+    alphaArr[p] = alpha;
+  }
 
-      if (strength > 0.55 && alpha > 0.15 && alpha < 0.85) {
-        alpha = alpha > 0.5 ? 1 : 0;
-      }
+  despeckle(alphaArr, soft, width, height, strength);
 
-      if (bg && alpha < 1) {
-        const ia = alpha;
-        out[i] = ink.r * ia + bg.r * (1 - ia);
-        out[i + 1] = ink.g * ia + bg.g * (1 - ia);
-        out[i + 2] = ink.b * ia + bg.b * (1 - ia);
-        out[i + 3] = 255;
-      } else {
-        out[i] = ink.r;
-        out[i + 1] = ink.g;
-        out[i + 2] = ink.b;
-        out[i + 3] = Math.round(alpha * 255);
-      }
+  for (let p = 0; p < n; p++) {
+    const i = p * 4;
+    const alpha = alphaArr[p];
+    if (bg && alpha < 1) {
+      const ia = alpha;
+      out[i] = ink.r * ia + bg.r * (1 - ia);
+      out[i + 1] = ink.g * ia + bg.g * (1 - ia);
+      out[i + 2] = ink.b * ia + bg.b * (1 - ia);
+      out[i + 3] = 255;
+    } else {
+      out[i] = ink.r;
+      out[i + 1] = ink.g;
+      out[i + 2] = ink.b;
+      out[i + 3] = Math.round(alpha * 255);
     }
   }
 
   return out;
+}
+
+/**
+ * Remove small isolated ink islands — AI-image ghosting and paper specks.
+ * An island is dropped when it is tiny, or small AND faint (low pre-harden
+ * alpha). Solid marks like i-dots and periods stay: they are dark, so their
+ * mean soft alpha is high.
+ */
+function despeckle(
+  alpha: Float32Array,
+  soft: Float32Array,
+  width: number,
+  height: number,
+  strength: number,
+): void {
+  const n = width * height;
+  // Include soft halos in each island so removal leaves no residue behind.
+  const mask = new Uint8Array(n);
+  for (let p = 0; p < n; p++) mask[p] = alpha[p] > 0.12 ? 1 : 0;
+
+  const labels = new Int32Array(n);
+  const minSpeck = Math.max(6, Math.round(n * 2e-5 * (0.5 + strength)));
+  const faintMax = Math.round(n * 0.002);
+  const faintCut = 0.35 + 0.25 * strength;
+  const stack: number[] = [];
+  const pixels: number[] = [];
+  let label = 0;
+
+  for (let p = 0; p < n; p++) {
+    if (!mask[p] || labels[p]) continue;
+    label++;
+    stack.length = 0;
+    pixels.length = 0;
+    stack.push(p);
+    labels[p] = label;
+    let sumSoft = 0;
+
+    while (stack.length) {
+      const q = stack.pop()!;
+      pixels.push(q);
+      sumSoft += soft[q];
+      const qx = q % width;
+      const qy = (q - qx) / width;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = qx + dx;
+          const ny = qy + dy;
+          if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+          const np = ny * width + nx;
+          if (mask[np] && !labels[np]) {
+            labels[np] = label;
+            stack.push(np);
+          }
+        }
+      }
+    }
+
+    const area = pixels.length;
+    const meanSoft = sumSoft / area;
+    if (area < minSpeck || (area < faintMax && meanSoft < faintCut)) {
+      for (const q of pixels) alpha[q] = 0;
+    }
+  }
 }
 
 function boxBlurLum(

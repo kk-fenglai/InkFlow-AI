@@ -203,6 +203,21 @@ interface GlyphLayout {
   rot: number;
 }
 
+interface SweepPoint {
+  x: number;
+  y: number;
+}
+
+interface SweepLayout {
+  p0: SweepPoint;
+  c1: SweepPoint;
+  c2: SweepPoint;
+  p3: SweepPoint;
+  lineWidth: number;
+  length: number;
+  baselineY: number;
+}
+
 interface SignatureLayout {
   cssWidth: number;
   cssHeight: number;
@@ -213,6 +228,66 @@ interface SignatureLayout {
   slantRad: number;
   glyphs: GlyphLayout[];
   settings: SignatureSettings;
+  sweep?: SweepLayout;
+}
+
+function sweepBezierPoint(
+  p0: SweepPoint,
+  c1: SweepPoint,
+  c2: SweepPoint,
+  p3: SweepPoint,
+  t: number,
+): SweepPoint {
+  const u = 1 - t;
+  return {
+    x: u * u * u * p0.x + 3 * u * u * t * c1.x + 3 * u * t * t * c2.x + t * t * t * p3.x,
+    y: u * u * u * p0.y + 3 * u * u * t * c1.y + 3 * u * t * t * c2.y + t * t * t * p3.y,
+  };
+}
+
+function computeSweepLayout(
+  rng: () => number,
+  glyphs: GlyphLayout[],
+  startX: number,
+  baselineY: number,
+  fontSize: number,
+  cssWidth: number,
+  cssHeight: number,
+  pressure: number,
+): SweepLayout | undefined {
+  const lastGlyph = [...glyphs].reverse().find((g) => g.char !== " ");
+  if (!lastGlyph) return undefined;
+
+  const exitX = lastGlyph.x + lastGlyph.w / 2;
+  const exitY = baselineY - fontSize * 0.1;
+  const rightX = Math.min(exitX + fontSize * 0.55, cssWidth - 6);
+  const leftX = Math.max(startX - fontSize * 0.3, 6);
+  const underY = Math.min(baselineY + fontSize * 0.3, cssHeight - 6);
+  const j1 = (rng() - 0.5) * fontSize * 0.06;
+  const j2 = (rng() - 0.5) * fontSize * 0.06;
+
+  const p0 = { x: exitX, y: exitY };
+  const c1 = { x: rightX + fontSize * 0.15, y: exitY + fontSize * 0.3 + j1 };
+  const c2 = { x: (leftX + rightX) / 2, y: underY + fontSize * 0.12 + j2 };
+  const p3 = { x: leftX, y: baselineY + fontSize * 0.05 };
+
+  let length = 0;
+  let prev = p0;
+  for (let i = 1; i <= 24; i++) {
+    const pt = sweepBezierPoint(p0, c1, c2, p3, i / 24);
+    length += Math.hypot(pt.x - prev.x, pt.y - prev.y);
+    prev = pt;
+  }
+
+  return {
+    p0,
+    c1,
+    c2,
+    p3,
+    lineWidth: Math.max(1.4, fontSize * 0.03 * (0.55 + pressure / 100)),
+    length,
+    baselineY,
+  };
 }
 
 function prepareSignatureLayout(
@@ -247,7 +322,8 @@ function prepareSignatureLayout(
   }
   totalWidth -= letterSpacing;
 
-  const maxWidth = cssWidth * 0.86;
+  const hasSweep = base.flourish === "sweep";
+  const maxWidth = cssWidth * (hasSweep ? 0.78 : 0.86);
   if (totalWidth > maxWidth && totalWidth > 0) {
     const scale = maxWidth / totalWidth;
     fontSize *= scale;
@@ -278,6 +354,19 @@ function prepareSignatureLayout(
     if (ch === " ") cursorX += fontSize * 0.08;
   });
 
+  const sweep = hasSweep
+    ? computeSweepLayout(
+        rng,
+        glyphs,
+        startX,
+        baselineY,
+        fontSize,
+        cssWidth,
+        cssHeight,
+        settings.pressure,
+      )
+    : undefined;
+
   return {
     cssWidth,
     cssHeight,
@@ -288,6 +377,7 @@ function prepareSignatureLayout(
     slantRad,
     glyphs,
     settings,
+    sweep,
   };
 }
 
@@ -327,6 +417,47 @@ function drawGlyph(
   ctx.restore();
 }
 
+function drawSweep(
+  ctx: CanvasRenderingContext2D,
+  layout: SignatureLayout,
+  partial: number,
+  alpha: number,
+): void {
+  const sweep = layout.sweep;
+  if (!sweep || partial <= 0 || alpha <= 0) return;
+
+  const { settings, strokeLayers, strokeSpread, slantRad } = layout;
+  const clamped = Math.min(1, Math.max(0, partial));
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = settings.inkColor;
+  ctx.lineWidth = sweep.lineWidth;
+  ctx.lineCap = "round";
+  ctx.translate(0, sweep.baselineY);
+  ctx.transform(1, 0, Math.tan(slantRad) * -1, 1, 0, 0);
+  ctx.translate(0, -sweep.baselineY);
+  if (clamped < 1) {
+    ctx.setLineDash([sweep.length * clamped, sweep.length]);
+  }
+
+  for (let layer = 0; layer < strokeLayers; layer++) {
+    const ox = (layer - (strokeLayers - 1) / 2) * strokeSpread;
+    ctx.beginPath();
+    ctx.moveTo(sweep.p0.x + ox, sweep.p0.y);
+    ctx.bezierCurveTo(
+      sweep.c1.x + ox,
+      sweep.c1.y,
+      sweep.c2.x + ox,
+      sweep.c2.y,
+      sweep.p3.x + ox,
+      sweep.p3.y,
+    );
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawSignatureGlyphs(
   ctx: CanvasRenderingContext2D,
   layout: SignatureLayout,
@@ -334,11 +465,14 @@ function drawSignatureGlyphs(
   showGhost: boolean,
 ): void {
   const drawable = layout.glyphs.filter((g) => g.char !== " ");
-  const totalWeight = drawable.reduce((sum, g) => sum + g.w, 0) || 1;
+  const glyphWeight = drawable.reduce((sum, g) => sum + g.w, 0) || 1;
+  const sweepWeight = layout.sweep ? glyphWeight * 0.18 : 0;
+  const totalWeight = glyphWeight + sweepWeight;
   let inkBudget = Math.min(1, Math.max(0, progress)) * totalWeight;
 
   if (showGhost) {
     drawable.forEach((g) => drawGlyph(ctx, g, layout, 1, 0.14));
+    drawSweep(ctx, layout, 1, 0.14);
   }
 
   for (const glyph of drawable) {
@@ -346,6 +480,10 @@ function drawSignatureGlyphs(
     const used = Math.min(glyph.w, inkBudget);
     drawGlyph(ctx, glyph, layout, used / glyph.w, 1);
     inkBudget -= glyph.w;
+  }
+
+  if (sweepWeight > 0 && inkBudget > 0) {
+    drawSweep(ctx, layout, inkBudget / sweepWeight, 1);
   }
 }
 
@@ -437,13 +575,38 @@ export function signatureToSvg(
     ? `<image href="${escapeSvgAttr(bg)}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="${preserve}" opacity="${bgOpacity}"/>`
     : "";
 
+  let sweepEl = "";
+  if (base.flourish === "sweep") {
+    const charCount = Array.from(settings.text.trim() || "Your Name").length;
+    const textWidth = charCount * fontSize * 0.52;
+    const startX = (width - textWidth) / 2;
+    const baselineY = height / 2 + fontSize * 0.3;
+    const exitX = Math.min(startX + textWidth, width - 6);
+    const exitY = baselineY - fontSize * 0.1;
+    const rightX = Math.min(exitX + fontSize * 0.55, width - 6);
+    const leftX = Math.max(startX - fontSize * 0.3, 6);
+    const underY = Math.min(baselineY + fontSize * 0.3, height - 6);
+    const lineWidth = Math.max(
+      1.4,
+      fontSize * 0.03 * (0.55 + settings.pressure / 100),
+    );
+    const d = [
+      `M ${exitX.toFixed(1)} ${exitY.toFixed(1)}`,
+      `C ${(rightX + fontSize * 0.15).toFixed(1)} ${(exitY + fontSize * 0.3).toFixed(1)},`,
+      `${((leftX + rightX) / 2).toFixed(1)} ${(underY + fontSize * 0.12).toFixed(1)},`,
+      `${leftX.toFixed(1)} ${(baselineY + fontSize * 0.05).toFixed(1)}`,
+    ].join(" ");
+    sweepEl = `\n    <path d="${d}" fill="none" stroke="${settings.inkColor}" stroke-width="${lineWidth.toFixed(2)}" stroke-linecap="round"/>`;
+  }
+
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   <style>text { font-family: ${family}, cursive; }</style>
   ${bgEl}
   <rect width="100%" height="100%" fill="none"/>
-  <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
-        font-size="${fontSize.toFixed(0)}" fill="${settings.inkColor}"
-        transform="skewX(${(-slant).toFixed(1)})" transform-origin="center">${text}</text>
+  <g transform="skewX(${(-slant).toFixed(1)})" transform-origin="center">
+    <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
+          font-size="${fontSize.toFixed(0)}" fill="${settings.inkColor}">${text}</text>${sweepEl}
+  </g>
 </svg>`;
 }
 

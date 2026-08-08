@@ -188,6 +188,43 @@ model SignAudit {
   @@index([userId, createdAt])
 }
 
+/// An admin-uploaded AI signature style. The reference image lives in `image`
+/// (client-downscaled before upload) and doubles as the picker thumbnail and
+/// the fal style-reference. Built-in styles stay in `lib/ai-photo-styles.ts`.
+model AiStyleAsset {
+  id        String   @id @default(cuid())
+  name      String
+  blurb     String   @default("")
+  prompt    String
+  mimeType  String
+  image     Bytes
+  byteSize  Int
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active, sortOrder])
+}
+
+/// An admin-uploaded signature photo used as an extra style reference for the
+/// AI redesign path in `lib/ai-photo.ts`.
+model RefineReference {
+  id        String   @id @default(cuid())
+  label     String
+  mimeType  String
+  image     Bytes
+  byteSize  Int
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active, sortOrder])
+}
+
 /// A signed PDF the user chose to keep in their cloud library. The file itself
 /// lives in `data`, so uploads are capped and pruned per user (see
 /// `lib/signed-documents.ts`) to keep the database from growing unbounded.

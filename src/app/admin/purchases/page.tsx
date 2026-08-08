@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
@@ -62,18 +61,13 @@ export default function AdminPurchasesPage() {
 
   return (
     <main className="page-main">
-      <header className="flex flex-wrap justify-between items-center gap-md mb-xl">
-        <div>
-          <h1 className="font-headline-md text-headline-md text-on-surface">
-            Admin — Payments
-          </h1>
-          <p className="font-body-md text-body-md text-on-surface-variant mt-sm">
-            Signed in as {session?.user?.email}
-          </p>
-        </div>
-        <Link href="/account" className="text-tertiary underline font-label-md">
-          Back to account
-        </Link>
+      <header className="mb-xl">
+        <h1 className="font-headline-md text-headline-md text-on-surface">
+          Purchases
+        </h1>
+        <p className="font-body-md text-body-md text-on-surface-variant mt-sm">
+          Signed in as {session?.user?.email}
+        </p>
       </header>
 
       {msg && (

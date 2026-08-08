@@ -109,9 +109,10 @@ export function generateStrokeData(
   const jitterAmount = (1 - settings.rhythm / 100) * (fontSize * 0.12);
   const rotJitter = (1 - settings.rhythm / 100) * 0.14;
 
+  const hasSweep = base.flourish === "sweep";
   let charWidth = fontSize * 0.55;
   let totalWidth = chars.length * (charWidth + letterSpacing) - letterSpacing;
-  const maxWidth = width * 0.86;
+  const maxWidth = width * (hasSweep ? 0.78 : 0.86);
   if (totalWidth > maxWidth && totalWidth > 0) {
     const scale = maxWidth / totalWidth;
     fontSize *= scale;
@@ -182,7 +183,23 @@ export function generateStrokeData(
 
     prevEnd = body[body.length - 1];
 
-    if (isLast && settings.fluidity > 50) {
+    if (isLast && hasSweep) {
+      const sweep = sweepPath(
+        prevEnd,
+        startX,
+        baselineY,
+        fontSize,
+        width,
+        height,
+      );
+      strokes.push({
+        id: "sweep",
+        order: order++,
+        label: "Underline sweep",
+        points: sweep,
+      });
+      prevEnd = sweep[sweep.length - 1];
+    } else if (isLast && settings.fluidity > 50) {
       const flourish = flourishPath(prevEnd, width, height, settings);
       strokes.push({
         id: `flourish-${idx}`,
@@ -251,6 +268,37 @@ function charStrokePath(
   }
 
   return rotatePoints(pts, cx, cy, rot);
+}
+
+/** Underline sweep for `flourish: "sweep"` bases — mirrors the canvas bezier. */
+function sweepPath(
+  start: StrokePoint,
+  startX: number,
+  baselineY: number,
+  fontSize: number,
+  width: number,
+  height: number,
+): StrokePoint[] {
+  const exitY = baselineY - fontSize * 0.1;
+  const rightX = Math.min(start.x + fontSize * 0.55, width - 6);
+  const leftX = Math.max(startX - fontSize * 0.3, 6);
+  const underY = Math.min(baselineY + fontSize * 0.3, height - 6);
+
+  const p0 = { x: start.x, y: exitY };
+  const c1 = { x: rightX + fontSize * 0.15, y: exitY + fontSize * 0.3 };
+  const c2 = { x: (leftX + rightX) / 2, y: underY + fontSize * 0.12 };
+  const p3 = { x: leftX, y: baselineY + fontSize * 0.05 };
+
+  const pts: StrokePoint[] = [start];
+  for (let i = 1; i <= 12; i++) {
+    const t = i / 12;
+    const u = 1 - t;
+    pts.push({
+      x: u * u * u * p0.x + 3 * u * u * t * c1.x + 3 * u * t * t * c2.x + t * t * t * p3.x,
+      y: u * u * u * p0.y + 3 * u * u * t * c1.y + 3 * u * t * t * c2.y + t * t * t * p3.y,
+    });
+  }
+  return pts;
 }
 
 function flourishPath(

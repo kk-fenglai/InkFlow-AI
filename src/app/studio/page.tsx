@@ -125,7 +125,6 @@ export default function StudioPage() {
     tone: "success" | "error" | "info";
     text: string;
   } | null>(null);
-  const [aiNote, setAiNote] = useState("");
   const [nlInstruction, setNlInstruction] = useState(initial.nlInstruction);
   const [lastStrokeData, setLastStrokeData] = useState<SignatureStrokeData | null>(
     null,
@@ -147,8 +146,11 @@ export default function StudioPage() {
     currentBase.tier === "premium" && !isUnlocked(baseId, "premium");
 
   const filteredBases = useMemo(() => {
-    if (templateFilter === "all") return ARTIST_BASES;
-    return ARTIST_BASES.filter((b) => b.tier === templateFilter);
+    if (templateFilter === "art")
+      return ARTIST_BASES.filter((b) => b.category === "art");
+    const curated = ARTIST_BASES.filter((b) => b.category !== "art");
+    if (templateFilter === "all") return curated;
+    return curated.filter((b) => b.tier === templateFilter);
   }, [templateFilter]);
 
   function requireUnlockedTemplate(): boolean {
@@ -358,7 +360,6 @@ export default function StudioPage() {
 
     setBusy(true);
     setTuneFeedback(null);
-    setAiNote("");
 
     const applyTuned = (tuned: SignatureSettings) => {
       setFluidity(tuned.fluidity);
@@ -372,7 +373,6 @@ export default function StudioPage() {
     if (!authenticated) {
       const result = tuneFromRules(nlInstruction, settings);
       applyTuned(result.settings);
-      setAiNote(`${result.aiNote} (offline rules)`);
       setTuneFeedback({
         tone: "info",
         text: "Applied with offline rules. Sign in to track usage and enable server AI when configured.",
@@ -415,9 +415,6 @@ export default function StudioPage() {
       }
 
       applyTuned(data.settings as SignatureSettings);
-      setAiNote(
-        `${data.aiNote}${data.source === "llm" ? " (AI)" : " (rules)"}`,
-      );
       setTuneFeedback({
         tone: "success",
         text: data.charged
@@ -439,7 +436,6 @@ export default function StudioPage() {
     if (!requireUnlockedTemplate()) return;
     setBusy(true);
     setStatusMsg("");
-    setAiNote("");
     try {
       const canvas = canvasRef.current?.getCanvas();
       const res = await fetch("/api/generate", {
@@ -467,8 +463,6 @@ export default function StudioPage() {
         setStatusMsg(data.error ?? "Generation failed.");
         return;
       }
-
-      setAiNote(data.aiNote ?? "");
 
       if (data.strokeData) {
         setLastStrokeData(data.strokeData as SignatureStrokeData);
@@ -724,11 +718,6 @@ export default function StudioPage() {
                 {tuneFeedback.text}
               </p>
             )}
-            {aiNote && (
-              <p className="font-body-md text-body-md text-tertiary/90 border-t border-tertiary/20 pt-md">
-                {aiNote}
-              </p>
-            )}
           </div>
 
         </section>
@@ -746,7 +735,7 @@ export default function StudioPage() {
               </p>
             </div>
             <div className="flex gap-xs">
-              {(["all", "free", "premium"] as const).map((f) => (
+              {(["all", "free", "premium", "art"] as const).map((f) => (
                 <button
                   key={f}
                   type="button"
@@ -757,7 +746,13 @@ export default function StudioPage() {
                       : "border-outline-variant text-on-surface-variant hover:border-tertiary"
                   }`}
                 >
-                  {f === "all" ? "All" : f === "free" ? "Free" : "Premium"}
+                  {f === "all"
+                    ? "All"
+                    : f === "free"
+                      ? "Free"
+                      : f === "premium"
+                        ? "Premium"
+                        : "Art Fonts"}
                 </button>
               ))}
             </div>

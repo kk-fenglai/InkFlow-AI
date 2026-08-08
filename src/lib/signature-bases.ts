@@ -1,9 +1,12 @@
+import { ART_FONT_BASES } from "@/lib/art-font-bases";
+
 export type TemplateTier = "free" | "premium";
 export type TemplateCategory =
   | "business"
   | "artistic"
   | "classic"
-  | "expressive";
+  | "expressive"
+  | "art";
 
 export interface ArtistBase {
   id: string;
@@ -12,6 +15,8 @@ export interface ArtistBase {
   fontFamily: string;
   tier: TemplateTier;
   category: TemplateCategory;
+  /** Local fonts are served from /fonts/art/ and must not hit Google Fonts. */
+  source?: "google" | "local";
   defaults: {
     fluidity: number;
     rhythm: number;
@@ -21,6 +26,8 @@ export interface ArtistBase {
   };
   previewClass: string;
   refImage?: string;
+  /** Programmatic underline sweep drawn by the render engine. */
+  flourish?: "sweep";
 }
 
 function base(
@@ -32,6 +39,7 @@ function base(
   category: TemplateCategory,
   defaults: ArtistBase["defaults"],
   refImage?: string,
+  extra?: { flourish?: "sweep" },
 ): ArtistBase {
   return {
     id,
@@ -43,10 +51,14 @@ function base(
     defaults,
     previewClass: `font-sig-${id}`,
     refImage,
+    flourish: extra?.flourish,
   };
 }
 
-/** 50 signature templates — 10 free, 40 premium (1 credit unlock each). */
+/**
+ * 58 curated templates (10 free, 48 premium) plus the generated "art"
+ * category of local handwriting fonts — all premium, 1 credit unlock each.
+ */
 export const ARTIST_BASES = [
   base("poet", "The Poet", "Fluid, expressive", "'Great Vibes', cursive", "free", "artistic", { fluidity: 85, rhythm: 60, pressure: 55, slant: 8, size: 1 }, "/images/base-poet.png"),
   base("classic", "The Classic", "Light, casual", "'Sacramento', cursive", "free", "classic", { fluidity: 65, rhythm: 70, pressure: 30, slant: 4, size: 1.1 }),
@@ -98,6 +110,15 @@ export const ARTIST_BASES = [
   base("vista", "The Vista", "Panoramic sweep", "'Whisper', cursive", "premium", "expressive", { fluidity: 88, rhythm: 44, pressure: 38, slant: 4, size: 1.24 }),
   base("charm", "The Charm", "Effortless appeal", "'Charm', cursive", "premium", "expressive", { fluidity: 75, rhythm: 62, pressure: 47, slant: 7, size: 1.06 }),
   base("grace", "The Grace", "Timeless poise", "'Gwendolyn', cursive", "premium", "classic", { fluidity: 79, rhythm: 65, pressure: 43, slant: 3, size: 1.14 }),
+  base("autograph", "The Autograph", "Bold celebrity sweep", "'Mr Dafoe', cursive", "premium", "expressive", { fluidity: 82, rhythm: 62, pressure: 78, slant: 12, size: 1.0 }, undefined, { flourish: "sweep" }),
+  base("icon", "The Icon", "Heavy retro logo ink", "'Yesteryear', cursive", "premium", "expressive", { fluidity: 75, rhythm: 70, pressure: 85, slant: 10, size: 0.98 }, undefined, { flourish: "sweep" }),
+  base("mogul", "The Mogul", "Grand flourished mark", "'Herr Von Muellerhoff', cursive", "premium", "expressive", { fluidity: 90, rhythm: 55, pressure: 55, slant: 9, size: 1.15 }, undefined, { flourish: "sweep" }),
+  base("headliner", "The Headliner", "Brush-dash star power", "'Kolker Brush', cursive", "premium", "expressive", { fluidity: 85, rhythm: 45, pressure: 70, slant: 11, size: 1.1 }, undefined, { flourish: "sweep" }),
+  base("marquee", "The Marquee", "Monoline logo scrawl", "'Mea Culpa', cursive", "premium", "expressive", { fluidity: 88, rhythm: 52, pressure: 60, slant: 8, size: 1.12 }, undefined, { flourish: "sweep" }),
+  base("superstar", "The Superstar", "Lightning fast scrawl", "'Babylonica', cursive", "premium", "expressive", { fluidity: 92, rhythm: 42, pressure: 50, slant: 12, size: 1.2 }, undefined, { flourish: "sweep" }),
+  base("dealmaker", "The Dealmaker", "Sharp pen authority", "'Vujahday Script', cursive", "premium", "expressive", { fluidity: 80, rhythm: 58, pressure: 65, slant: 9, size: 1.08 }, undefined, { flourish: "sweep" }),
+  base("premiere", "The Premiere", "Gala long-tail script", "'Monsieur La Doulaise', cursive", "premium", "expressive", { fluidity: 87, rhythm: 50, pressure: 48, slant: 7, size: 1.18 }, undefined, { flourish: "sweep" }),
+  ...ART_FONT_BASES,
 ] as const satisfies readonly ArtistBase[];
 
 export type ArtistBaseId = (typeof ARTIST_BASES)[number]["id"];

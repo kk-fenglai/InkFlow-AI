@@ -52,7 +52,19 @@ export const authOptions: NextAuthOptions = {
 
 
 
-        const user = await prisma.user.findUnique({ where: { email } });
+        let user;
+
+        try {
+
+          user = await prisma.user.findUnique({ where: { email } });
+
+        } catch {
+
+          // DB unreachable — surface as a network error, not bad credentials.
+
+          throw new Error("NETWORK_ERROR");
+
+        }
 
         if (!user?.passwordHash) return null;
 

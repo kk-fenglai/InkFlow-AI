@@ -1,3 +1,9 @@
+import { ARTIST_BASES } from "@/lib/signature-bases";
+
+const PREMIUM_TEMPLATE_COUNT = ARTIST_BASES.filter(
+  (b) => b.tier === "premium",
+).length;
+
 /** Credit costs for premium (server-backed) actions. */
 export const CREDIT_COST = {
   GENERATE_FINAL: 1,
@@ -6,6 +12,7 @@ export const CREDIT_COST = {
   SAVE_SIGNATURE: 1,
   TEMPLATE_UNLOCK: 1,
   SIGN_PDF: 1,
+  AI_PHOTO: 1,
 } as const;
 
 /** AI natural-language tune: charge 1 credit every N uses. */
@@ -32,6 +39,11 @@ export const CREDIT_USAGE_ITEMS = [
   {
     action: "Save captured handwritten photo to cloud",
     cost: CREDIT_COST.SAVE_SIGNATURE,
+    free: false,
+  },
+  {
+    action: "AI autograph photo (generate from a name)",
+    cost: CREDIT_COST.AI_PHOTO,
     free: false,
   },
   { action: "Premium template unlock (permanent)", cost: CREDIT_COST.TEMPLATE_UNLOCK, free: false },
@@ -108,7 +120,7 @@ export const PRICING_TIERS = [
     features: [
       "Live signature preview",
       "10 free signature templates",
-      "40 premium templates (1 cr unlock)",
+      `${PREMIUM_TEMPLATE_COUNT} premium templates (1 cr unlock)`,
       "Refinement Workbench (free export)",
     ],
     cta: "Start Crafting",

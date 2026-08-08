@@ -86,6 +86,56 @@ export async function saveCapturedSignature(input: {
   };
 }
 
+interface AiPhotoResponse {
+  ok: boolean;
+  image?: string;
+  creditsRemaining?: number;
+  error?: string;
+  code?: string;
+}
+
+async function postAiPhoto(payload: object): Promise<AiPhotoResponse> {
+  const res = await fetch("/api/ai-photo", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    return {
+      ok: false,
+      error: data.error,
+      code: data.code ?? (res.status === 401 ? "UNAUTHORIZED" : undefined),
+    };
+  }
+  return {
+    ok: true,
+    image: data.image,
+    creditsRemaining: data.creditsRemaining,
+  };
+}
+
+/** Way 1 — generate an autograph photo of `name` in a catalog style. */
+export function generateAiPhotoSignature(
+  name: string,
+  styleId: string,
+  custom?: string,
+): Promise<AiPhotoResponse> {
+  return postAiPhoto({
+    mode: "style",
+    name,
+    styleId,
+    ...(custom ? { custom } : {}),
+  });
+}
+
+/** Way 2 — AI-redesign the user's own uploaded signature photo. */
+export function redesignAiPhotoSignature(
+  image: string,
+): Promise<AiPhotoResponse> {
+  return postAiPhoto({ mode: "redesign", image });
+}
+
 export async function renameCloudSignature(
   id: string,
   name: string,

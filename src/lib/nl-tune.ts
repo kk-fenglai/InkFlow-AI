@@ -173,7 +173,8 @@ export async function tuneFromLlm(
 Return ONLY valid JSON with keys: fluidity, rhythm, pressure, slant, size, baseId, note.
 Each numeric field is a DELTA to add to current values (not absolute).
 baseId must be one of: ${ARTIST_BASE_IDS.join(", ")} — or omit if unchanged.
-Keep deltas modest (typically -20..20 for 1-100 params, -0.15..0.15 for size).`;
+Keep deltas modest (typically -20..20 for 1-100 params, -0.15..0.15 for size).
+Write "note" in the same language as the user's instruction (e.g. Chinese instruction → Chinese note, English → English).`;
 
   const userPayload = {
     instruction,

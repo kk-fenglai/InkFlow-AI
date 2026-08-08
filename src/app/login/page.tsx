@@ -16,6 +16,7 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [networkError, setNetworkError] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -29,7 +30,11 @@ function LoginForm() {
     });
     setBusy(false);
     if (res?.error) {
-      setError("Email or password is incorrect.");
+      if (res.error === "NETWORK_ERROR") {
+        setNetworkError(true);
+      } else {
+        setError("Email or password is incorrect.");
+      }
       return;
     }
     router.push(callbackUrl);
@@ -114,6 +119,33 @@ function LoginForm() {
           {busy ? "Signing in…" : "Sign in"}
         </button>
       </form>
+      {networkError && (
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-md"
+        >
+          <div className="w-full max-w-sm bg-surface rounded p-lg flex flex-col gap-md text-center">
+            <span className="material-symbols-outlined text-[36px] text-error mx-auto">
+              wifi_off
+            </span>
+            <p className="font-label-md text-label-md text-on-surface">
+              Network connection failed
+            </p>
+            <p className="font-body-md text-on-surface-variant">
+              We couldn&apos;t reach the server. Please check your internet
+              connection and try again.
+            </p>
+            <button
+              type="button"
+              onClick={() => setNetworkError(false)}
+              className="bg-on-surface text-surface py-sm rounded font-label-md text-label-md hover:bg-tertiary transition-colors"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </AuthShell>
   );
 }

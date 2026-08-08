@@ -11,7 +11,7 @@ const STORAGE_KEY = "inkflow-signature-library";
 const DRAFT_KEY = "inkflow-studio-draft";
 const MAX_TEMPLATES = 30;
 
-export type StudioTemplateFilter = "all" | TemplateTier;
+export type StudioTemplateFilter = "all" | TemplateTier | "art";
 
 export interface StudioDraft {
   settings: SignatureSettings;

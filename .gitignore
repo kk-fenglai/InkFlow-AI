@@ -44,3 +44,9 @@ android/graphify-out/
 *.tsbuildinfo
 next-env.d.ts
 .vercel
+
+# local working material (session screenshots, raw template sources)
+/admin-dashboard.png
+/refine-test-result.png
+/scratch-cleanup.mjs
+/signature_ai_photo/
