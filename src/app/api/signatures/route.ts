@@ -8,7 +8,6 @@ import {
 import { getSessionUser } from "@/lib/session";
 import { buildStrokePayload, isValidBaseId } from "@/lib/server-ai";
 import {
-  isPremiumBase,
   type ArtistBaseId,
   type SignatureSettings,
 } from "@/lib/signature";
@@ -17,7 +16,6 @@ import {
   buildCapturedStrokeData,
   type SignatureStrokeData,
 } from "@/lib/stroke-data";
-import { premiumAccessResponse } from "@/lib/template-access";
 
 export async function GET() {
   const user = await getSessionUser();
@@ -100,13 +98,6 @@ export async function POST(req: Request) {
     "My Signature";
 
   const baseId = strokeData.settings.baseId as ArtistBaseId;
-  const premium = isPremiumBase(baseId);
-
-  // Premium templates must be unlocked before they can be saved.
-  if (premium) {
-    const locked = await premiumAccessResponse(user.id, baseId);
-    if (locked) return locked;
-  }
 
   // Every cloud-library save costs 1 credit, regardless of template tier.
   const deducted = await deductCredits(

@@ -205,9 +205,6 @@ export default function PricingPage() {
             {SUBSCRIPTION_PLAN.description}
           </p>
           <SubscribeButton />
-          <p className="font-label-sm text-label-sm text-on-surface-variant mt-md">
-            Requires STRIPE_PRICE_PRO_MONTHLY in server env.
-          </p>
         </div>
       </section>
 
@@ -220,8 +217,8 @@ export default function PricingPage() {
             Generation credits
           </h2>
           <p className="font-body-md text-body-md text-on-surface-variant max-w-lg mx-auto">
-            Credits power final exports, cloud saves, template unlocks, AI tuning,
-            SVG export, and PDF signing. Previews and practice stay free.
+            Credits power final exports, cloud saves, AI tuning, SVG export, and
+            PDF signing. Every template, previews, and practice stay free.
           </p>
         </div>
 

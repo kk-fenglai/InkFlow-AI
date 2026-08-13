@@ -28,10 +28,13 @@ export async function POST(req: Request) {
   if (!subscriptionStripePriceId()) {
     return NextResponse.json(
       {
-        error: "Set STRIPE_PRICE_PRO_MONTHLY in .env for subscriptions.",
+        // Server misconfiguration (missing STRIPE_PRICE_PRO_MONTHLY) — the
+        // visitor gets a plain message, the code identifies it in logs.
+        error:
+          "Monthly subscription is unavailable right now. Credit packs still work.",
         code: "INVALID_PRICE",
       },
-      { status: 400 },
+      { status: 503 },
     );
   }
 

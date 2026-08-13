@@ -10,7 +10,6 @@ export const CREDIT_COST = {
   SVG_EXPORT: 1,
   AI_TUNE: 1,
   SAVE_SIGNATURE: 1,
-  TEMPLATE_UNLOCK: 1,
   SIGN_PDF: 1,
   AI_PHOTO: 1,
 } as const;
@@ -46,10 +45,9 @@ export const CREDIT_USAGE_ITEMS = [
     cost: CREDIT_COST.AI_PHOTO,
     free: false,
   },
-  { action: "Premium template unlock (permanent)", cost: CREDIT_COST.TEMPLATE_UNLOCK, free: false },
   { action: "Sign PDF (SES — Simple E-Signature)", cost: CREDIT_COST.SIGN_PDF, free: false },
   { action: "Live preview & watermarked export", cost: 0, free: true },
-  { action: "10 free signature templates", cost: 0, free: true },
+  { action: "Every signature template, premium included", cost: 0, free: true },
 ] as const;
 
 /** Stripe credit packs — prices in EUR. */
@@ -120,7 +118,7 @@ export const PRICING_TIERS = [
     features: [
       "Live signature preview",
       "10 free signature templates",
-      `${PREMIUM_TEMPLATE_COUNT} premium templates (1 cr unlock)`,
+      `${PREMIUM_TEMPLATE_COUNT} premium templates — free, no unlock`,
       "Refinement Workbench (free export)",
     ],
     cta: "Start Crafting",
@@ -138,7 +136,7 @@ export const PRICING_TIERS = [
       "Everything in Guest",
       "Render Final Ink (free HD preview)",
       "Save Final Ink to device (1 cr)",
-      "Save to cloud library (1 cr) · unlock (1 cr)",
+      "Save to cloud library (1 cr)",
       "Sign PDF — SES (1 cr)",
       `AI tune (${AI_TUNE_USES_PER_CREDIT} uses = 1 cr) & SVG (1 cr)`,
     ],

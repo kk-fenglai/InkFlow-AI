@@ -129,23 +129,6 @@ data class VerifyGoogleResponse(
     val message: String? = null,
 )
 
-data class TemplatesResponse(
-    val ok: Boolean? = null,
-    val unlocked: List<String>? = null,
-    val unlockCost: Int? = null,
-    val error: String? = null,
-)
-
-data class UnlockTemplateResponse(
-    val ok: Boolean? = null,
-    val baseId: String? = null,
-    val name: String? = null,
-    val alreadyOwned: Boolean? = null,
-    val creditsRemaining: Int? = null,
-    val error: String? = null,
-    val code: String? = null,
-)
-
 data class SignPdfResponse(
     val ok: Boolean? = null,
     val pdfBase64: String? = null,

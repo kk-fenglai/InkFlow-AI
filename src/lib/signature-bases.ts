@@ -57,7 +57,8 @@ function base(
 
 /**
  * 58 curated templates (10 free, 48 premium) plus the generated "art"
- * category of local handwriting fonts — all premium, 1 credit unlock each.
+ * category of local handwriting fonts. Every template is free to use — "premium"
+ * is a style tier only.
  */
 export const ARTIST_BASES = [
   base("poet", "The Poet", "Fluid, expressive", "'Great Vibes', cursive", "free", "artistic", { fluidity: 85, rhythm: 60, pressure: 55, slant: 8, size: 1 }, "/images/base-poet.png"),

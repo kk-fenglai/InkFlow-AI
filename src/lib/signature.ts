@@ -34,14 +34,6 @@ export function isPremiumBase(id: ArtistBaseId): boolean {
   return getBase(id).tier === "premium";
 }
 
-export function canUseTemplate(
-  id: ArtistBaseId,
-  unlockedIds: readonly string[],
-): boolean {
-  const b = getBase(id);
-  return b.tier === "free" || unlockedIds.includes(id);
-}
-
 export function countTemplatesByTier(tier: TemplateTier): number {
   return ARTIST_BASES.filter((b) => b.tier === tier).length;
 }
@@ -557,6 +549,8 @@ export function signatureToSvg(
   settings: SignatureSettings,
   width = 800,
   height = 320,
+  /** Optional `@font-face` rule with the typeface inlined — see svg-font-embed. */
+  fontFaceRule = "",
 ): string {
   const base = getBase(settings.baseId);
   const text = (settings.text.trim() || "Your Name").replace(
@@ -600,7 +594,7 @@ export function signatureToSvg(
   }
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-  <style>text { font-family: ${family}, cursive; }</style>
+  <style>${fontFaceRule}text { font-family: ${family}, cursive; }</style>
   ${bgEl}
   <rect width="100%" height="100%" fill="none"/>
   <g transform="skewX(${(-slant).toFixed(1)})" transform-origin="center">

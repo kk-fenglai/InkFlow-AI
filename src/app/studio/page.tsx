@@ -34,7 +34,6 @@ import { saveCloudSignature } from "@/lib/signature-api";
 import { CREDIT_COST, AI_TUNE_USES_PER_CREDIT } from "@/lib/constants";
 import { tuneFromRules } from "@/lib/nl-tune";
 import { downloadCanvasPng } from "@/lib/canvas-export";
-import { useTemplateUnlocks } from "@/hooks/useTemplateUnlocks";
 
 type TemplateFilter = StudioTemplateFilter;
 
@@ -135,15 +134,6 @@ export default function StudioPage() {
 
   const canvasRef = useRef<SignatureCanvasHandle>(null);
   const { credits, authenticated, refresh } = useCredits();
-  const {
-    isUnlocked,
-    unlockTemplate,
-    refresh: refreshUnlocks,
-  } = useTemplateUnlocks();
-
-  const currentBase = getBase(baseId);
-  const templateLocked =
-    currentBase.tier === "premium" && !isUnlocked(baseId, "premium");
 
   const filteredBases = useMemo(() => {
     if (templateFilter === "art")
@@ -152,14 +142,6 @@ export default function StudioPage() {
     if (templateFilter === "all") return curated;
     return curated.filter((b) => b.tier === templateFilter);
   }, [templateFilter]);
-
-  function requireUnlockedTemplate(): boolean {
-    if (!templateLocked) return true;
-    setStatusMsg(
-      `Unlock “${currentBase.name}” (${CREDIT_COST.TEMPLATE_UNLOCK} credit) to export or save.`,
-    );
-    return false;
-  }
 
   const settings: SignatureSettings = useMemo(
     () => ({
@@ -265,46 +247,9 @@ export default function StudioPage() {
     reader.readAsDataURL(file);
   }
 
-  async function unlockCurrentTemplate() {
-    if (!authenticated) {
-      setStatusMsg("Sign in to unlock premium templates.");
-      return;
-    }
-    if (!templateLocked) return;
-
-    setBusy(true);
-    setStatusMsg("");
-    try {
-      const result = await unlockTemplate(baseId);
-      if (!result.ok) {
-        if (result.code === "INSUFFICIENT_CREDITS") {
-          setStatusMsg(
-            `Need ${CREDIT_COST.TEMPLATE_UNLOCK} credit to unlock. You have ${credits}.`,
-          );
-        } else {
-          setStatusMsg(result.error ?? "Unlock failed.");
-        }
-        return;
-      }
-      await refreshUnlocks();
-      refresh();
-      setStatusMsg(
-        `Unlocked “${currentBase.name}”. ${result.creditsRemaining ?? credits} credit(s) left.`,
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function saveToCloud() {
     if (!authenticated) {
       setStatusMsg("Sign in to save signatures to your cloud library.");
-      return;
-    }
-    if (templateLocked) {
-      setStatusMsg(
-        `Unlock “${currentBase.name}” (${CREDIT_COST.TEMPLATE_UNLOCK} cr) before saving a premium template.`,
-      );
       return;
     }
     setBusy(true);
@@ -433,7 +378,6 @@ export default function StudioPage() {
   }
 
   async function renderFinalInk() {
-    if (!requireUnlockedTemplate()) return;
     setBusy(true);
     setStatusMsg("");
     try {
@@ -480,7 +424,6 @@ export default function StudioPage() {
   }
 
   async function saveToLocal() {
-    if (!requireUnlockedTemplate()) return;
     if (!authenticated) {
       setStatusMsg("Sign in to save your final ink.");
       return;
@@ -528,7 +471,6 @@ export default function StudioPage() {
   }
 
   function downloadSvg() {
-    if (!requireUnlockedTemplate()) return;
     if (!authenticated || credits < CREDIT_COST.SVG_EXPORT) {
       setStatusMsg(
         `SVG export requires ${CREDIT_COST.SVG_EXPORT} credit — sign in or buy credits.`,
@@ -590,21 +532,6 @@ export default function StudioPage() {
               settings={settings}
               className="w-full h-full block"
             />
-            {templateLocked && (
-              <div className="absolute inset-x-0 bottom-0 bg-on-surface/75 text-surface px-md py-sm flex flex-wrap items-center justify-between gap-sm">
-                <span className="font-label-sm text-label-sm">
-                  Premium preview · unlock to export &amp; save
-                </span>
-                <button
-                  type="button"
-                  onClick={unlockCurrentTemplate}
-                  disabled={busy}
-                  className="px-sm py-xs bg-tertiary text-on-tertiary rounded font-label-sm hover:bg-tertiary/90 disabled:opacity-50"
-                >
-                  Unlock ({CREDIT_COST.TEMPLATE_UNLOCK} cr)
-                </button>
-              </div>
-            )}
             <div className="absolute top-md left-md w-4 h-4 border-t border-l border-outline-variant/50" />
             <div className="absolute top-md right-md w-4 h-4 border-t border-r border-outline-variant/50" />
             <div className="absolute bottom-md left-md w-4 h-4 border-b border-l border-outline-variant/50" />
@@ -731,7 +658,7 @@ export default function StudioPage() {
               </h2>
               <p className="font-label-sm text-label-sm text-on-surface-variant mt-xs">
                 {countTemplatesByTier("free")} free · {countTemplatesByTier("premium")}{" "}
-                premium ({CREDIT_COST.TEMPLATE_UNLOCK} cr unlock)
+                premium — all free to use
               </p>
             </div>
             <div className="flex gap-xs">
@@ -761,8 +688,6 @@ export default function StudioPage() {
           <div className="grid max-h-[340px] grid-cols-2 gap-sm overflow-y-auto pr-xs sm:max-h-[520px] sm:grid-cols-2 sm:gap-md md:grid-cols-3 xl:grid-cols-4">
             {filteredBases.map((b) => {
               const active = b.id === baseId;
-              const locked =
-                b.tier === "premium" && !isUnlocked(b.id, "premium");
               return (
                 <button
                   key={b.id}
@@ -775,7 +700,7 @@ export default function StudioPage() {
                       active
                         ? "bg-surface-container-lowest border-2 border-primary"
                         : "bg-surface-container-low border border-surface-dim group-hover:border-tertiary"
-                    } ${locked ? "opacity-90" : ""}`}
+                    }`}
                   >
                     {b.refImage && (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -793,23 +718,14 @@ export default function StudioPage() {
                     >
                       {previewWord(text)}
                     </span>
-                    <span
-                      className={`absolute top-sm left-sm px-xs py-[2px] rounded font-label-sm text-[10px] uppercase tracking-wider ${
-                        b.tier === "free"
-                          ? "bg-surface/90 text-on-surface-variant"
-                          : "bg-tertiary/90 text-on-tertiary"
-                      }`}
-                    >
-                      {b.tier === "free" ? "Free" : `${CREDIT_COST.TEMPLATE_UNLOCK} cr`}
-                    </span>
-                    {locked && (
-                      <span className="absolute top-sm right-sm bg-on-surface/80 text-surface rounded-full p-xs">
-                        <span className="material-symbols-outlined text-[14px]">
-                          lock
-                        </span>
+                    {/* Premium is a style tier, not a paywall — every template
+                        is free, so the badge carries no credit cost. */}
+                    {b.tier === "premium" && (
+                      <span className="absolute top-sm left-sm px-xs py-[2px] rounded font-label-sm text-[10px] uppercase tracking-wider bg-tertiary/90 text-on-tertiary">
+                        Premium
                       </span>
                     )}
-                    {active && !locked && (
+                    {active && (
                       <div className="absolute top-sm right-sm bg-primary text-surface rounded-full p-xs shadow-sm">
                         <span className="material-symbols-outlined filled text-[14px]">
                           check
@@ -1071,10 +987,14 @@ export default function StudioPage() {
             {statusMsg && (
               <p className="font-label-sm text-label-sm text-center text-on-surface-variant mt-xs">
                 {statusMsg}{" "}
-                <Link href="/login" className="text-tertiary underline">
-                  Sign in
-                </Link>
-                {" · "}
+                {!authenticated && (
+                  <>
+                    <Link href="/login" className="text-tertiary underline">
+                      Sign in
+                    </Link>
+                    {" · "}
+                  </>
+                )}
                 <Link href="/pricing" className="text-tertiary underline">
                   Pricing
                 </Link>

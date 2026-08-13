@@ -1,4 +1,5 @@
-import { renderSignature, type SignatureSettings } from "@/lib/signature";
+import { getBase, renderSignature, type SignatureSettings } from "@/lib/signature";
+import { ensureFontReady } from "@/lib/signature-fonts-client";
 
 /** Render signature settings to a transparent PNG data URL (client only). */
 export async function settingsToPngDataUrl(
@@ -9,11 +10,14 @@ export async function settingsToPngDataUrl(
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
+
+  // Wait for the template's own webfont before drawing. Rasterising first and
+  // hoping fonts.ready fixes it up does not work off the Studio routes, where
+  // the face is never requested at all.
+  const base = getBase(settings.baseId);
+  await ensureFontReady(base.fontFamily, canvas.height * 0.55 * settings.size);
+
   renderSignature(canvas, settings, undefined, { width, height });
-  if (typeof document !== "undefined" && "fonts" in document) {
-    await document.fonts.ready.catch(() => {});
-    renderSignature(canvas, settings, undefined, { width, height });
-  }
   return canvas.toDataURL("image/png");
 }
 

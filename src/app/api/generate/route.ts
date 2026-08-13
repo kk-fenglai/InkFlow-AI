@@ -3,7 +3,6 @@ import { getSessionUser } from "@/lib/session";
 import { buildStrokePayload, enhanceSignatureSettings, isValidBaseId } from "@/lib/server-ai";
 import type { SignatureSettings } from "@/lib/signature";
 import { backgroundFieldsFromPartial } from "@/lib/signature";
-import { premiumAccessResponse } from "@/lib/template-access";
 
 export async function POST(req: Request) {
   const user = await getSessionUser();
@@ -45,9 +44,6 @@ export async function POST(req: Request) {
     inkColor: String(body.inkColor ?? "#1d1c16").slice(0, 20),
     ...backgroundFieldsFromPartial(body),
   };
-
-  const locked = await premiumAccessResponse(user.id, settings.baseId);
-  if (locked) return locked;
 
   // Rendering the final ink is free — credits are charged only when the user
   // chooses where to save it (local export or cloud library).

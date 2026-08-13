@@ -24,10 +24,6 @@ class StudioState {
 
     var tierFilter by mutableStateOf<Tier?>(null)
     var galleryExpanded by mutableStateOf(false)
-    var unlocked by mutableStateOf<Set<String>>(emptySet())
-    var unlockCost by mutableIntStateOf(1)
-    /** Guards the one-shot unlock fetch against refiring on every tab return. */
-    var unlocksLoaded = false
 
     var message by mutableStateOf<String?>(null)
     var error by mutableStateOf<String?>(null)
@@ -64,9 +60,6 @@ class StudioState {
         rhythm = base.rhythm.toFloat()
         pressure = base.pressure.toFloat()
     }
-
-    val currentLocked: Boolean
-        get() = SignatureBases.find(baseId).tier == Tier.PREMIUM && baseId !in unlocked
 }
 
 class SignPdfState {

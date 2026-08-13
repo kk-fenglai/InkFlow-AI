@@ -280,8 +280,8 @@ private fun CreditUsageCard() {
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            "Credits power final exports, cloud saves, template unlocks, AI tuning, " +
-                "SVG export, and PDF signing. Previews and practice stay free.",
+            "Credits power final exports, cloud saves, AI tuning, SVG export, and " +
+                "PDF signing. Every template, previews, and practice stay free.",
             style = MaterialTheme.typography.bodyMedium,
             color = DesignTokens.OnSurfaceVariant,
         )

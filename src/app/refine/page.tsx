@@ -135,7 +135,10 @@ export default function RefinePage() {
     return () => clearInterval(t);
   }, [aiBusy]);
 
-  const loadFromDataUrl = useCallback((dataUrl: string) => {
+  // `source` gates the capture-quality hints: they coach the user on
+  // photographing ink on paper, so they are meaningless — and wrong — for a
+  // synthetic AI image, which has no pen, paper, or lighting to fix.
+  const loadFromDataUrl = useCallback((dataUrl: string, source: "photo" | "ai" = "photo") => {
     const img = new Image();
     img.onload = () => {
       setSourceImg(img);
@@ -161,7 +164,9 @@ export default function RefinePage() {
         setRefineStrength(suggested.refineStrength);
         setInkColor(suggested.inkColor);
         setStatusMsg(suggested.aiNote);
-        setCaptureWarning(captureQualityWarning(stats));
+        setCaptureWarning(
+          source === "photo" ? captureQualityWarning(stats) : "",
+        );
       }
     };
     img.src = dataUrl;
@@ -389,7 +394,7 @@ export default function RefinePage() {
 
     if (result.ok && result.image) {
       void refresh();
-      loadFromDataUrl(result.image);
+      loadFromDataUrl(result.image, "ai");
       setAiMsg("Redesign ready (1 credit) — tune the extraction below.");
       return;
     }
@@ -416,7 +421,7 @@ export default function RefinePage() {
 
     if (result.ok && result.image) {
       void refresh();
-      loadFromDataUrl(result.image);
+      loadFromDataUrl(result.image, "ai");
       setAiMsg("AI autograph ready (1 credit) — tune the extraction below.");
       return;
     }
@@ -1062,10 +1067,14 @@ export default function RefinePage() {
             {statusMsg && (
               <p className="font-label-sm text-label-sm text-center text-on-surface-variant">
                 {statusMsg}{" "}
-                <Link href="/login" className="text-tertiary underline">
-                  Sign in
-                </Link>
-                {" · "}
+                {!authenticated && (
+                  <>
+                    <Link href="/login" className="text-tertiary underline">
+                      Sign in
+                    </Link>
+                    {" · "}
+                  </>
+                )}
                 <Link href="/pricing" className="text-tertiary underline">
                   Pricing
                 </Link>

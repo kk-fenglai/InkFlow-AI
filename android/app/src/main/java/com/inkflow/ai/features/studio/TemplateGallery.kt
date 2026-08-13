@@ -25,7 +25,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -68,8 +67,6 @@ fun TemplateGallery(
     selectedId: String,
     previewText: String,
     filter: Tier?,
-    unlocked: Set<String>,
-    unlockCost: Int,
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     onFilterChange: (Tier?) -> Unit,
@@ -103,7 +100,7 @@ fun TemplateGallery(
         Spacer(Modifier.height(2.dp))
         Text(
             "${SignatureBases.freeCount} free · ${SignatureBases.premiumCount} premium " +
-                "($unlockCost cr unlock)",
+                "— all free to use",
             style = MaterialTheme.typography.labelSmall,
             color = DesignTokens.OnSurfaceVariant,
         )
@@ -141,8 +138,6 @@ fun TemplateGallery(
                         base = base,
                         previewText = previewWord(previewText),
                         selected = base.id == selectedId,
-                        locked = base.tier == Tier.PREMIUM && base.id !in unlocked,
-                        unlockCost = unlockCost,
                         onClick = { onSelect(base) },
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -161,8 +156,6 @@ fun TemplateGallery(
                         base = base,
                         previewText = previewWord(previewText),
                         selected = base.id == selectedId,
-                        locked = base.tier == Tier.PREMIUM && base.id !in unlocked,
-                        unlockCost = unlockCost,
                         onClick = { onSelect(base) },
                         modifier = Modifier.weight(1f),
                     )
@@ -212,8 +205,6 @@ private fun TemplateCard(
     base: SignatureBase,
     previewText: String,
     selected: Boolean,
-    locked: Boolean,
-    unlockCost: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -239,7 +230,7 @@ private fun TemplateCard(
                     fontFamily = font,
                     fontSize = 30.sp,
                     lineHeight = 38.sp,
-                    color = DesignTokens.Ink.copy(alpha = if (locked) 0.45f else 0.9f),
+                    color = DesignTokens.Ink.copy(alpha = 0.9f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
@@ -247,7 +238,8 @@ private fun TemplateCard(
                 )
 
                 // Only premium carries a badge — a "FREE" chip on every free
-                // card is noise the section header already covers.
+                // card is noise the section header already covers. Premium is a
+                // style tier, not a paywall: it costs nothing to use.
                 if (base.tier == Tier.PREMIUM) {
                     Surface(
                         color = DesignTokens.Secondary.copy(alpha = 0.9f),
@@ -257,7 +249,7 @@ private fun TemplateCard(
                             .padding(6.dp),
                     ) {
                         Text(
-                            "$unlockCost CR",
+                            "PREMIUM",
                             style = MaterialTheme.typography.labelSmall,
                             fontSize = 9.sp,
                             color = DesignTokens.SurfaceCard,
@@ -266,24 +258,7 @@ private fun TemplateCard(
                     }
                 }
 
-                if (locked) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(6.dp)
-                            .size(20.dp)
-                            .clip(CircleShape)
-                            .background(DesignTokens.Ink.copy(alpha = 0.8f)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            Icons.Outlined.Lock,
-                            contentDescription = "Locked",
-                            tint = DesignTokens.SurfaceCard,
-                            modifier = Modifier.size(12.dp),
-                        )
-                    }
-                } else if (selected) {
+                if (selected) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)

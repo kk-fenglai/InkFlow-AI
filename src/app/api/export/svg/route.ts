@@ -3,8 +3,8 @@ import { CREDIT_COST } from "@/lib/constants";
 import { guardCreditAction } from "@/lib/credit-guard";
 import { buildStrokePayload, enhanceSignatureSettings, isValidBaseId } from "@/lib/server-ai";
 import type { SignatureSettings } from "@/lib/signature";
-import { signatureToSvg, backgroundFieldsFromPartial } from "@/lib/signature";
-import { premiumAccessResponse } from "@/lib/template-access";
+import { signatureToSvg, backgroundFieldsFromPartial, getBase } from "@/lib/signature";
+import { fontFaceRuleFor } from "@/lib/svg-font-embed";
 
 export async function POST(req: Request) {
   const guard = await guardCreditAction(
@@ -43,13 +43,13 @@ export async function POST(req: Request) {
     ...backgroundFieldsFromPartial(body),
   };
 
-  const locked = await premiumAccessResponse(guard.user.id, settings.baseId);
-  if (locked) return locked;
-
   const enhanced = enhanceSignatureSettings(settings);
   const width = clamp(body.width ?? 800, 200, 1600);
   const height = clamp(body.height ?? 320, 100, 800);
-  const svg = signatureToSvg(enhanced, width, height);
+  // Inline the typeface so the exported file looks the same on a machine that
+  // does not have the font installed.
+  const fontFace = await fontFaceRuleFor(getBase(enhanced.baseId));
+  const svg = signatureToSvg(enhanced, width, height, fontFace);
 
   return NextResponse.json({
     ok: true,

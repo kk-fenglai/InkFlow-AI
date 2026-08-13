@@ -96,18 +96,13 @@ fun StudioScreen(
     var rhythm by state::rhythm
     var pressure by state::pressure
     var tierFilter by state::tierFilter
-    var unlocked by state::unlocked
-    val unlockCost = state.unlockCost
     var message by state::message
     var error by state::error
 
     // Purely transient — an in-flight request does not outlive the screen.
-    var unlocking by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
 
     fun applyBase(id: String) = state.applyBase(id)
-
-    val currentLocked = state.currentLocked
 
     val pickBackground = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent(),
@@ -124,16 +119,6 @@ fun StudioScreen(
                     state.backgroundCustomDataUrl = upload.dataUrl
                     state.backgroundSelection = "custom"
                 }
-            }
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        if (!state.unlocksLoaded) {
-            runCatching { apiClient.fetchUnlockedTemplates() }.getOrNull()?.let { res ->
-                unlocked = res.unlocked.orEmpty().toSet()
-                res.unlockCost?.let { state.unlockCost = it }
-                state.unlocksLoaded = true
             }
         }
     }
@@ -190,64 +175,12 @@ fun StudioScreen(
             selectedId = baseId,
             previewText = text,
             filter = tierFilter,
-            unlocked = unlocked,
-            unlockCost = unlockCost,
             expanded = state.galleryExpanded,
             onExpandedChange = { state.galleryExpanded = it },
             onFilterChange = { tierFilter = it },
             onSelect = { applyBase(it.id) },
             modifier = Modifier.fillMaxWidth(),
         )
-
-        if (currentLocked) {
-            Spacer(Modifier.height(12.dp))
-            InkCard(modifier = Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            "“${SignatureBases.find(baseId).name}” is premium",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = DesignTokens.Ink,
-                        )
-                        Text(
-                            "Unlock once for $unlockCost credit — yours permanently.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = DesignTokens.OnSurfaceVariant,
-                        )
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    InkPrimaryButton(
-                        text = "Unlock",
-                        loading = unlocking,
-                        onClick = {
-                            scope.launch {
-                                unlocking = true
-                                error = null
-                                message = null
-                                try {
-                                    val res = apiClient.unlockTemplate(baseId)
-                                    if (res.ok == true) {
-                                        unlocked = unlocked + baseId
-                                        message = if (res.alreadyOwned == true) {
-                                            "Already unlocked."
-                                        } else {
-                                            "Unlocked “${res.name ?: baseId}”."
-                                        }
-                                        authStore.refreshUser()
-                                    } else {
-                                        error = res.error ?: "Unlock failed"
-                                    }
-                                } catch (e: Exception) {
-                                    error = e.message
-                                } finally {
-                                    unlocking = false
-                                }
-                            }
-                        },
-                    )
-                }
-            }
-        }
 
         Spacer(Modifier.height(22.dp))
         SliderRow("FLUIDITY", fluidity) { fluidity = it }
@@ -269,7 +202,7 @@ fun StudioScreen(
         InkPrimaryButton(
             text = "Save to Library (1 Credit)",
             loading = saving,
-            enabled = text.isNotBlank() && !currentLocked,
+            enabled = text.isNotBlank(),
             onClick = {
                 scope.launch {
                     saving = true
@@ -316,7 +249,7 @@ fun StudioScreen(
         Spacer(Modifier.height(10.dp))
         InkOutlinedButton(
             text = "Share PNG",
-            enabled = text.isNotBlank() && !currentLocked,
+            enabled = text.isNotBlank(),
             onClick = {
                 scope.launch {
                     val base = SignatureBases.find(baseId)

@@ -1,16 +1,11 @@
 import { NextResponse } from "next/server";
-import { listUnlockedTemplateIds } from "@/lib/template-unlocks-db";
-import { getSessionUser } from "@/lib/session";
 import {
   ARTIST_BASES,
+  ARTIST_BASE_IDS,
   countTemplatesByTier,
 } from "@/lib/signature";
-import { CREDIT_COST } from "@/lib/constants";
 
 export async function GET() {
-  const user = await getSessionUser();
-  const unlocked = user ? await listUnlockedTemplateIds(user.id) : [];
-
   return NextResponse.json({
     ok: true,
     templates: ARTIST_BASES.map((t) => ({
@@ -21,12 +16,14 @@ export async function GET() {
       category: t.category,
       previewClass: t.previewClass,
     })),
-    unlocked,
+    // Every template is free — reported as unlocked so older clients that still
+    // draw lock badges from this list show them all as available.
+    unlocked: ARTIST_BASE_IDS,
     counts: {
       total: ARTIST_BASES.length,
       free: countTemplatesByTier("free"),
       premium: countTemplatesByTier("premium"),
     },
-    unlockCost: CREDIT_COST.TEMPLATE_UNLOCK,
+    unlockCost: 0,
   });
 }

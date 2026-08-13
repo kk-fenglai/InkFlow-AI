@@ -172,11 +172,6 @@ class ApiClient(private val tokenStore: TokenStore) {
         ),
     )
 
-    suspend fun fetchUnlockedTemplates(): TemplatesResponse = get("/api/templates")
-
-    suspend fun unlockTemplate(baseId: String): UnlockTemplateResponse =
-        post("/api/templates/unlock", mapOf("baseId" to baseId))
-
     suspend fun forgotPassword(email: String) {
         post<OkResponse>("/api/auth/forgot-password", mapOf("email" to email), auth = false)
     }

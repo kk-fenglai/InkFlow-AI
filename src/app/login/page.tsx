@@ -2,12 +2,11 @@
 
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import AuthShell from "@/components/AuthShell";
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/account";
   const registered = searchParams.get("registered") === "1";
@@ -37,8 +36,11 @@ function LoginForm() {
       }
       return;
     }
-    router.push(callbackUrl);
-    router.refresh();
+    // Hard navigation, not router.push: the destination is usually the
+    // middleware-protected /account, and a soft push races the session cookie
+    // (plus router.refresh aborts the in-flight push), which bounced the user
+    // straight back to this form with the session already established.
+    window.location.assign(callbackUrl);
   }
 
   return (
