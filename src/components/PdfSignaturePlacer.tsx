@@ -17,7 +17,9 @@ type PdfDoc = Awaited<
 async function loadPdfJs() {
   const pdfjs = await import("pdfjs-dist");
   if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-    pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+    // Served from public/pdf by scripts/copy-pdf-worker.mjs — same-origin, so
+    // no CDN dependency and no CSP exception needed.
+    pdfjs.GlobalWorkerOptions.workerSrc = "/pdf/pdf.worker.min.mjs";
   }
   return pdfjs;
 }

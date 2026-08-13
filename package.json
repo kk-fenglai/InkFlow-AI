@@ -13,7 +13,8 @@
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "npx tsx prisma/seed.ts",
-    "vercel:env": "node scripts/push-vercel-env.mjs"
+    "vercel:env": "node scripts/push-vercel-env.mjs",
+    "prebuild": "node scripts/copy-pdf-worker.mjs"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"

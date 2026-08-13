@@ -7,7 +7,7 @@ export default function PrivacyPage() {
         Privacy Policy
       </h1>
       <p className="font-body-md text-body-md text-on-surface-variant mb-lg">
-        Last updated: 2026-07-17
+        Last updated: 2026-08-13
       </p>
 
       <section className="space-y-md font-body-md text-body-md text-on-surface-variant">
@@ -40,6 +40,23 @@ export default function PrivacyPage() {
           Optional AI-assisted features may send tuning prompts or image
           analysis data to configured providers (e.g. DeepSeek or OpenAI) when
           enabled on the server.
+        </p>
+
+        <h2 className="font-headline-sm text-headline-sm text-on-surface">
+          Advertising & cookies
+        </h2>
+        <p>
+          We use Google Ads conversion tracking (gtag.js) to measure which
+          campaigns lead to sign-ups and purchases. It may set advertising
+          cookies and send your IP address and page URL to Google.
+        </p>
+        <p>
+          In the EEA, the UK, and Switzerland these cookies stay disabled until
+          you accept them in the consent banner. Elsewhere you can decline at
+          any time using the same banner. Declining stops all data being shared
+          with Google; the rest of the site works unchanged. Your choice is kept
+          in your browser&apos;s local storage — clear site data to be asked
+          again.
         </p>
 
         <h2 className="font-headline-sm text-headline-sm text-on-surface">
