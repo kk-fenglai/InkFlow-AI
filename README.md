@@ -66,6 +66,14 @@ npm run dev            # http://localhost:3000
 | `STRIPE_SECRET_KEY` | Stripe test secret `sk_test_...` |
 | `STRIPE_WEBHOOK_SECRET` | From `stripe listen` or Dashboard webhooks |
 | `DEEPSEEK_API_KEY` | DeepSeek API for AI Natural Language Tune |
+| `FAL_KEY` | fal.ai key (Seedream) — required for AI Autograph photo generation |
+| `OPENROUTER_API_KEY` | Optional fallback provider for AI photo generation |
+| `GEMINI_API_KEY` | Optional fallback provider for AI photo generation (needs billing) |
+| `DEEPSEEK_API_BASE` | Optional — override DeepSeek base URL (default `https://api.deepseek.com`) |
+| `STRIPE_CHECKOUT_SUCCESS_URL` | Optional — success redirect template, `{PURCHASE_ID}` placeholder |
+| `STRIPE_CHECKOUT_CANCEL_URL` | Optional — cancel redirect template, `{PURCHASE_ID}` placeholder |
+
+> Full list (email/SMTP, mobile JWT + CORS, Apple/Google IAP) — see `.env.example`.
 
 ### Stripe local testing
 
@@ -73,7 +81,7 @@ npm run dev            # http://localhost:3000
 2. Forward webhooks:
 
 ```bash
-stripe listen --forward-to localhost:3010/api/stripe/webhook
+stripe listen --forward-to localhost:3000/api/stripe/webhook
 ```
 
 3. Copy the `whsec_...` value into `STRIPE_WEBHOOK_SECRET`
@@ -112,7 +120,7 @@ npm run db:seed      # create demo user
    | `INKFLOW_DATABASE_URL_UNPOOLED` | Neon direct URL |
    | `NEXTAUTH_URL` | `https://<your-domain>.vercel.app` |
    | `NEXTAUTH_SECRET` | `openssl rand -base64 32` |
-   | `STRIPE_*` / `DEEPSEEK_*` | As in `.env.example` |
+   | `STRIPE_*` / `DEEPSEEK_*` / `FAL_KEY` | As in `.env.example` |
 
 3. Deploy — build runs `prisma migrate deploy` then `next build`.
 4. After first deploy, set `NEXTAUTH_URL` to your final custom domain if you add one.

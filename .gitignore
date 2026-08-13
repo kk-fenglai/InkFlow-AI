@@ -50,3 +50,5 @@ next-env.d.ts
 /refine-test-result.png
 /scratch-cleanup.mjs
 /signature_ai_photo/
+
+.env*
