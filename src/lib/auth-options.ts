@@ -8,6 +8,8 @@ import { prisma } from "@/lib/prisma";
 
 import { rateLimit } from "@/lib/rate-limit";
 
+import { recordLoginEvent, clientIpFromForwardedFor } from "@/lib/login-events";
+
 
 
 export const authOptions: NextAuthOptions = {
@@ -34,7 +36,7 @@ export const authOptions: NextAuthOptions = {
 
       },
 
-      async authorize(credentials) {
+      async authorize(credentials, req) {
 
         const email = credentials?.email?.trim().toLowerCase();
 
@@ -71,6 +73,14 @@ export const authOptions: NextAuthOptions = {
         const valid = await bcrypt.compare(password, user.passwordHash);
 
         if (!valid) return null;
+
+        const headers = req?.headers ?? {};
+
+        await recordLoginEvent(user.id, {
+          source: "web",
+          ip: clientIpFromForwardedFor(headers["x-forwarded-for"]),
+          userAgent: headers["user-agent"] ?? null,
+        });
 
 
 

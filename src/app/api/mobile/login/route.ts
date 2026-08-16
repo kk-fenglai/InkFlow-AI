@@ -6,6 +6,7 @@ import {
   mobileOptionsResponse,
 } from "@/lib/mobile-auth/cors";
 import { authRateLimit } from "@/lib/rate-limit";
+import { recordLoginEvent, clientIpFromForwardedFor } from "@/lib/login-events";
 
 export async function OPTIONS(req: Request) {
   return mobileOptionsResponse(req);
@@ -55,6 +56,12 @@ export async function POST(req: Request) {
       { status: 401 },
     );
   }
+
+  await recordLoginEvent(user.id, {
+    source: "mobile",
+    ip: clientIpFromForwardedFor(req.headers.get("x-forwarded-for")),
+    userAgent: req.headers.get("user-agent"),
+  });
 
   return jsonWithMobileCors(req, await buildMobileAuthResponse(user));
 }

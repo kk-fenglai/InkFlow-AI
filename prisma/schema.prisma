@@ -33,6 +33,19 @@ model User {
   passwordResetTokens PasswordResetToken[]
   mobileRefreshTokens MobileRefreshToken[]
   emailVerificationTokens EmailVerificationToken[]
+  loginEvents        LoginEvent[]
+}
+
+model LoginEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source    String   @default("web")
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model EmailVerificationToken {
