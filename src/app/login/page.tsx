@@ -1,6 +1,6 @@
 "use client";
 
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
@@ -27,8 +27,8 @@ function LoginForm() {
       password,
       redirect: false,
     });
-    setBusy(false);
     if (res?.error) {
+      setBusy(false);
       if (res.error === "NETWORK_ERROR") {
         setNetworkError(true);
       } else {
@@ -36,11 +36,16 @@ function LoginForm() {
       }
       return;
     }
+    // Admins are a backend-only role — send them to the dashboard rather than
+    // the studio, so they never land on the normal user interface.
+    const session = await getSession();
+    const destination =
+      session?.user?.role === "admin" ? "/admin" : callbackUrl;
     // Hard navigation, not router.push: the destination is usually the
     // middleware-protected /account, and a soft push races the session cookie
     // (plus router.refresh aborts the in-flight push), which bounced the user
     // straight back to this form with the session already established.
-    window.location.assign(callbackUrl);
+    window.location.assign(destination);
   }
 
   return (

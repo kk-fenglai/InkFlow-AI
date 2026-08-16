@@ -7,6 +7,14 @@ import {
   withMobileCors,
 } from "@/lib/mobile-auth/cors";
 
+// User-facing app pages. Admins are a backend-only role and get bounced out of
+// these into /admin; normal and anonymous users are unaffected.
+const USER_APP_PREFIXES = ["/studio", "/library", "/refine", "/sign"];
+
+function hasPrefix(path: string, prefix: string): boolean {
+  return path === prefix || path.startsWith(`${prefix}/`);
+}
+
 export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
@@ -17,10 +25,11 @@ export async function middleware(req: NextRequest) {
     return withMobileCors(req, NextResponse.next());
   }
 
-  if (
-    path.startsWith("/account") ||
-    path.startsWith("/admin")
-  ) {
+  const isAdminPath = path.startsWith("/admin");
+  const isAccountPath = path.startsWith("/account");
+  const isUserAppPath = USER_APP_PREFIXES.some((p) => hasPrefix(path, p));
+
+  if (isAdminPath || isAccountPath || isUserAppPath) {
     const token = await getToken({
       req,
       secret: process.env.NEXTAUTH_SECRET,
@@ -35,11 +44,20 @@ export async function middleware(req: NextRequest) {
       return NextResponse.next();
     }
 
-    if (path.startsWith("/admin") && token?.role !== "admin") {
+    // Admins are confined to the backend: keep them out of the studio and
+    // account pages entirely.
+    if (token?.role === "admin" && (isUserAppPath || isAccountPath)) {
+      return NextResponse.redirect(new URL("/admin", req.url));
+    }
+
+    // The admin area requires an admin session.
+    if (isAdminPath && token?.role !== "admin") {
       return NextResponse.redirect(new URL("/admin/login", req.url));
     }
 
-    if (!token) {
+    // The account area requires any session. User-app pages stay open to
+    // normal and anonymous visitors, so they are not gated here.
+    if (isAccountPath && !token) {
       return NextResponse.redirect(new URL("/login", req.url));
     }
   }
@@ -53,6 +71,14 @@ export const config = {
     "/account/:path*",
     "/admin",
     "/admin/:path*",
+    "/studio",
+    "/studio/:path*",
+    "/library",
+    "/library/:path*",
+    "/refine",
+    "/refine/:path*",
+    "/sign",
+    "/sign/:path*",
     "/api/mobile/:path*",
     "/api/apple/:path*",
     "/api/google/:path*",

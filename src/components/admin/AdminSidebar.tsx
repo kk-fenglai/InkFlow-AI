@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
@@ -55,12 +56,13 @@ export default function AdminSidebar({ email }: { email: string }) {
           <p className="font-body-md text-label-sm text-on-surface-variant truncate">
             {email}
           </p>
-          <Link
-            href="/studio"
+          <button
+            type="button"
+            onClick={() => signOut({ callbackUrl: "/admin/login" })}
             className="font-label-md text-label-sm text-tertiary hover:underline"
           >
-            Back to site
-          </Link>
+            Sign out
+          </button>
         </div>
       </aside>
 
@@ -70,12 +72,13 @@ export default function AdminSidebar({ email }: { email: string }) {
           <span className="font-headline-sm text-[18px] text-on-surface">
             InkFlow Admin
           </span>
-          <Link
-            href="/studio"
+          <button
+            type="button"
+            onClick={() => signOut({ callbackUrl: "/admin/login" })}
             className="font-label-md text-label-sm text-tertiary hover:underline"
           >
-            Back to site
-          </Link>
+            Sign out
+          </button>
         </div>
         <nav className="touch-scroll-x flex gap-xs px-sm pb-sm">{links}</nav>
       </div>
