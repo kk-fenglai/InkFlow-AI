@@ -6,17 +6,35 @@ interface Props {
   subtitle: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  /** "admin" swaps the studio badge for a restricted-access treatment. */
+  variant?: "studio" | "admin";
 }
 
-export default function AuthShell({ title, subtitle, children, footer }: Props) {
+export default function AuthShell({
+  title,
+  subtitle,
+  children,
+  footer,
+  variant = "studio",
+}: Props) {
+  const isAdmin = variant === "admin";
   return (
     <main className="page-main">
       <div className="max-w-md mx-auto">
         <div className="flex flex-col items-center text-center mb-xl">
           <AccountAvatar size="lg" className="mb-lg" />
-          <span className="inline-block px-sm py-xs bg-tertiary/10 text-tertiary font-label-sm text-label-sm uppercase tracking-widest rounded border border-tertiary/20 mb-md">
-            Studio Access
-          </span>
+          {isAdmin ? (
+            <span className="inline-flex items-center gap-xs px-sm py-xs bg-on-surface text-surface font-label-sm text-label-sm uppercase tracking-widest rounded mb-md">
+              <span className="material-symbols-outlined text-[16px]" aria-hidden>
+                lock
+              </span>
+              Admin Access
+            </span>
+          ) : (
+            <span className="inline-block px-sm py-xs bg-tertiary/10 text-tertiary font-label-sm text-label-sm uppercase tracking-widest rounded border border-tertiary/20 mb-md">
+              Studio Access
+            </span>
+          )}
           <h1 className="font-display-lg text-display-lg-mobile text-on-surface mb-sm">
             {title}
           </h1>

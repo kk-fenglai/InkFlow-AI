@@ -26,14 +26,21 @@ export async function middleware(req: NextRequest) {
       secret: process.env.NEXTAUTH_SECRET,
     });
 
+    // The admin login page is the one /admin route that must stay reachable
+    // without an admin session. Already-signed-in admins skip the form.
+    if (path === "/admin/login") {
+      if (token?.role === "admin") {
+        return NextResponse.redirect(new URL("/admin", req.url));
+      }
+      return NextResponse.next();
+    }
+
     if (path.startsWith("/admin") && token?.role !== "admin") {
-      const login = new URL("/login", req.url);
-      return NextResponse.redirect(login);
+      return NextResponse.redirect(new URL("/admin/login", req.url));
     }
 
     if (!token) {
-      const login = new URL("/login", req.url);
-      return NextResponse.redirect(login);
+      return NextResponse.redirect(new URL("/login", req.url));
     }
   }
 
