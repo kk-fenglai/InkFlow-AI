@@ -1,38 +1,24 @@
-"use client";
+import { getAdminStats } from "@/lib/admin-stats";
 
-import { useEffect, useState } from "react";
+// Server component: stats are queried in the same request that renders the
+// page, instead of a second client fetch → second function invocation → second
+// auth chain. The protected layout has already verified the admin session.
+export default async function AdminDashboardPage() {
+  let cards: { label: string; value: string }[] = [];
+  let msg = "";
 
-interface AdminStats {
-  users: number;
-  purchasesCompleted: number;
-  revenueCents: number;
-  stylesActive: number;
-  refsActive: number;
-}
-
-export default function AdminDashboardPage() {
-  const [stats, setStats] = useState<AdminStats | null>(null);
-  const [msg, setMsg] = useState("");
-
-  useEffect(() => {
-    fetch("/api/admin/stats")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.stats) setStats(d.stats);
-        else setMsg(d.error ?? "Could not load stats.");
-      })
-      .catch(() => setMsg("Could not load stats."));
-  }, []);
-
-  const cards = stats
-    ? [
-        { label: "Users", value: String(stats.users) },
-        { label: "Completed purchases", value: String(stats.purchasesCompleted) },
-        { label: "Revenue", value: `$${(stats.revenueCents / 100).toFixed(2)}` },
-        { label: "Active AI styles", value: String(stats.stylesActive) },
-        { label: "Refine references", value: String(stats.refsActive) },
-      ]
-    : [];
+  try {
+    const stats = await getAdminStats();
+    cards = [
+      { label: "Users", value: String(stats.users) },
+      { label: "Completed purchases", value: String(stats.purchasesCompleted) },
+      { label: "Revenue", value: `$${(stats.revenueCents / 100).toFixed(2)}` },
+      { label: "Active AI styles", value: String(stats.stylesActive) },
+      { label: "Refine references", value: String(stats.refsActive) },
+    ];
+  } catch {
+    msg = "Could not load stats.";
+  }
 
   return (
     <main className="page-main">
@@ -63,11 +49,6 @@ export default function AdminDashboardPage() {
             </p>
           </div>
         ))}
-        {!stats && !msg && (
-          <p className="font-body-md text-body-md text-on-surface-variant col-span-full">
-            Loading…
-          </p>
-        )}
       </div>
     </main>
   );

@@ -7,20 +7,17 @@ export async function getSessionUserWithRole() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return null;
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      credits: true,
-      plan: true,
-      role: true,
-      subscriptionEnd: true,
-    },
-  });
-
-  return user;
+  // The jwt callback in auth-options already re-reads role/credits/plan/name
+  // from the database on every request, so the session is fresh — no second
+  // user lookup needed (each DB round-trip is expensive on serverless).
+  return {
+    id: session.user.id,
+    email: session.user.email ?? "",
+    name: session.user.name ?? null,
+    credits: session.user.credits,
+    plan: session.user.plan,
+    role: session.user.role,
+  };
 }
 
 export async function requireAdmin() {
